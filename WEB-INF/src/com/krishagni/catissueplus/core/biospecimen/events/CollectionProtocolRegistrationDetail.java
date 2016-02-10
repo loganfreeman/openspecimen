@@ -150,7 +150,7 @@ public class CollectionProtocolRegistrationDetail {
 		detail.setActivityStatus(cpr.getActivityStatus());
 		detail.setBarcode(cpr.getBarcode());
 		detail.setPpid(cpr.getPpid());
-		detail.setRegistrationDate(cpr.getRegistrationDate());
+		detail.setRegistrationDate(excludePhi ? null : cpr.getRegistrationDate());
 		
 		CollectionProtocol cp = cpr.getCollectionProtocol();
 		detail.setCpId(cp.getId());

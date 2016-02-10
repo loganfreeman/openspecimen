@@ -15,6 +15,7 @@ angular.module('os.biospecimen.participant.overview', ['os.biospecimen.models'])
       }
 
       $scope.cpr.participant.birthDate = "###";
+      $scope.cpr.registrationDate = "###";
     }
 
     $scope.isOtherProtocol = function(other) {
