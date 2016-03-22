@@ -20,16 +20,13 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.HttpHeaders;
 
 import org.apache.commons.lang.StringUtils;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.codec.Base64;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.filter.GenericFilterBean;
 
 import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.audit.domain.UserApiCallLog;
-import com.krishagni.catissueplus.core.audit.services.AuditService;
+import com.krishagni.catissueplus.core.audit.services.ApiAuditService;
 import com.krishagni.catissueplus.core.auth.events.LoginDetail;
 import com.krishagni.catissueplus.core.auth.events.TokenDetail;
 import com.krishagni.catissueplus.core.auth.services.UserAuthenticationService;
@@ -50,7 +47,7 @@ public class AuthTokenFilter extends GenericFilterBean {
 	
 	private Map<String, List<String>> excludeUrls = new HashMap<String, List<String>>();
 	
-	private AuditService auditService;
+	private ApiAuditService auditService;
 	
 	public UserAuthenticationService getAuthService() {
 		return authService;
@@ -80,7 +77,7 @@ public class AuthTokenFilter extends GenericFilterBean {
 		}
 	}
 
-	public void setAuditService(AuditService auditService) {
+	public void setAuditService(ApiAuditService auditService) {
 		this.auditService = auditService;
 	}
 

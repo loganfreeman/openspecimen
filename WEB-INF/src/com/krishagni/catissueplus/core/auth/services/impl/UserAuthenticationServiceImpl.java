@@ -15,7 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.audit.domain.UserApiCallLog;
-import com.krishagni.catissueplus.core.audit.services.AuditService;
+import com.krishagni.catissueplus.core.audit.services.ApiAuditService;
 import com.krishagni.catissueplus.core.auth.AuthConfig;
 import com.krishagni.catissueplus.core.auth.domain.AuthErrorCode;
 import com.krishagni.catissueplus.core.auth.domain.AuthToken;
@@ -36,13 +36,13 @@ import com.krishagni.catissueplus.core.common.util.Status;
 public class UserAuthenticationServiceImpl implements UserAuthenticationService {
 	private DaoFactory daoFactory;
 	
-	private AuditService auditService;
+	private ApiAuditService auditService;
 	
 	public void setDaoFactory(DaoFactory daoFactory) {
 		this.daoFactory = daoFactory;
 	}
 	
-	public void setAuditService(AuditService auditService) {
+	public void setAuditService(ApiAuditService auditService) {
 		this.auditService = auditService;
 	}
 

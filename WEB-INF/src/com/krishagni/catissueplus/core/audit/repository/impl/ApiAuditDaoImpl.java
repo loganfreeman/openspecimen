@@ -4,10 +4,10 @@ import java.util.Date;
 import java.util.List;
 
 import com.krishagni.catissueplus.core.audit.domain.UserApiCallLog;
-import com.krishagni.catissueplus.core.audit.repository.AuditDao;
+import com.krishagni.catissueplus.core.audit.repository.ApiAuditDao;
 import com.krishagni.catissueplus.core.common.repository.AbstractDao;
 
-public class AuditDaoImpl extends AbstractDao<UserApiCallLog> implements AuditDao {
+public class ApiAuditDaoImpl extends AbstractDao<UserApiCallLog> implements ApiAuditDao {
 
 	@Override
 	@SuppressWarnings("unchecked")

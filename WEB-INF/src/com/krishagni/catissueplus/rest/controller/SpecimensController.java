@@ -22,6 +22,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.krishagni.catissueplus.core.administrative.services.DistributionOrderService;
+import com.krishagni.catissueplus.core.audit.AuditService;
+import com.krishagni.catissueplus.core.audit.events.AuditDetail;
+import com.krishagni.catissueplus.core.audit.events.RequestAudit;
+import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
 import com.krishagni.catissueplus.core.administrative.services.ShipmentService;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.SpecimenErrorCode;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenDeleteCriteria;
@@ -60,6 +64,9 @@ public class SpecimensController {
 	
 	@Autowired
 	private DistributionOrderService distributionService;
+	
+	@Autowired
+	private AuditService auditSvc;
 
 	@Autowired
 	private HttpServletRequest httpServletRequest;
@@ -312,6 +319,20 @@ public class SpecimensController {
 	@ResponseBody	
 	public Map<String, Object> getCprAndVisitIds(@PathVariable("id") Long specimenId) {
 		ResponseEvent<Map<String, Object>> resp = specimenSvc.getCprAndVisitIds(new RequestEvent<Long>(specimenId));
+		resp.throwErrorIfUnsuccessful();
+		return resp.getPayload();
+	}
+	
+	@RequestMapping(method = RequestMethod.GET, value="/{id}/audit-trail")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody	
+	public AuditDetail getAuditDetails(@PathVariable("id") Long specimenId) {
+		
+		RequestAudit req = new RequestAudit();
+		req.setEntityType(Specimen.class.getSimpleName());
+		req.setEntityId(specimenId);
+		
+		ResponseEvent<AuditDetail> resp = auditSvc.getAuditDetail(getRequest(req));
 		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}

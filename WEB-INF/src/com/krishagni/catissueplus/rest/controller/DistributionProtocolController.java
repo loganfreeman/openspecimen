@@ -36,7 +36,7 @@ public class DistributionProtocolController {
 
 	@Autowired
 	private HttpServletRequest httpServletRequest;
-
+	
 	@RequestMapping(method = RequestMethod.GET)
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody

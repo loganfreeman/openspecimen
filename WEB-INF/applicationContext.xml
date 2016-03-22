@@ -240,13 +240,13 @@
     <property name="domainRegFactory" ref="domainFact"/>	
   </bean>
   
-  <bean id="auditService" class="com.krishagni.catissueplus.core.audit.services.impl.AuditServiceImpl">
+  <bean id="apiAuditService" class="com.krishagni.catissueplus.core.audit.services.impl.ApiAuditServiceImpl">
     <property name="daoFactory" ref="biospecimenDaoFactory"/>
   </bean> 
 
   <bean id="userAuthService" class="com.krishagni.catissueplus.core.auth.services.impl.UserAuthenticationServiceImpl">
     <property name="daoFactory" ref="biospecimenDaoFactory"/>
-    <property name="auditService" ref="auditService"/>
+    <property name="auditService" ref="apiAuditService"/>
   </bean>
 
   <bean id="specimenSvc" class="com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenServiceImpl">
@@ -278,14 +278,6 @@
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.VisitNameToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.PpidSpecTypeLabelToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.VisitSpecTypeLabelToken"/>
-        <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.SpecimenTypeLabelToken">
-          <property name="cfgSvc" ref="cfgSvc"/>
-          <property name="defaultAbbrFile" value="classpath:/com/krishagni/catissueplus/core/biospecimen/specimen-type-abbr.csv"/>
-        </bean>
-        <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.SpecimenPathologyStatusToken">
-          <property name="cfgSvc" ref="cfgSvc"/>
-          <property name="defaultAbbrFile" value="classpath:/com/krishagni/catissueplus/core/biospecimen/specimen-path-status-abbr.csv"/>
-        </bean>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.SrCodeLabelToken"/>
         <ref bean="extnPvLabelToken"/>
       </list>
@@ -453,7 +445,7 @@
   
   <bean id="authTokenFilter" class="com.krishagni.catissueplus.rest.filter.AuthTokenFilter">
     <property name="authService" ref="userAuthService"/>
-    <property name="auditService" ref="auditService"/>
+    <property name="auditService" ref="apiAuditService"/>
     <property name="excludeUrls">
       <map>
         <entry key="POST">
@@ -796,6 +788,10 @@
   
   <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">  
     <property name="dataSource" ref="dataSource"/>
+  </bean>
+  
+  <bean id="auditSvc" class="com.krishagni.catissueplus.core.audit.services.impl.AuditServiceImpl">
+    <property name="daoFactory" ref="biospecimenDaoFactory"/>
   </bean>
   
   <bean id="upgradeLogUpdater" class="com.krishagni.catissueplus.core.init.UpgradeLogUpdater">

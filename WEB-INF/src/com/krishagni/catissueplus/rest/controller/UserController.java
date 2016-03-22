@@ -16,11 +16,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.administrative.events.InstituteDetail;
 import com.krishagni.catissueplus.core.administrative.events.PasswordDetails;
 import com.krishagni.catissueplus.core.administrative.events.UserDetail;
 import com.krishagni.catissueplus.core.administrative.repository.UserListCriteria;
 import com.krishagni.catissueplus.core.administrative.services.UserService;
+import com.krishagni.catissueplus.core.audit.AuditService;
+import com.krishagni.catissueplus.core.audit.events.AuditDetail;
+import com.krishagni.catissueplus.core.audit.events.RequestAudit;
 import com.krishagni.catissueplus.core.auth.services.UserAuthenticationService;
 import com.krishagni.catissueplus.core.common.events.DeleteEntityOp;
 import com.krishagni.catissueplus.core.common.events.DependentEntityDetail;
@@ -41,6 +45,9 @@ public class UserController {
 
 	@Autowired
 	private HttpServletRequest httpServletRequest;
+	
+	@Autowired
+	private AuditService auditSvc;
 
 	@RequestMapping(method = RequestMethod.GET)
 	@ResponseStatus(HttpStatus.OK)
@@ -245,6 +252,21 @@ public class UserController {
 	@ResponseStatus(HttpStatus.OK)
 	public InstituteDetail getInstitute(@PathVariable Long id) {
 		ResponseEvent<InstituteDetail> resp = userService.getInstitute(new RequestEvent<Long>(id));
+		resp.throwErrorIfUnsuccessful();
+		return resp.getPayload();
+	}
+	
+	@RequestMapping(method = RequestMethod.GET, value="/{id}/audit-trail")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody	
+	public AuditDetail getAuditDetails(@PathVariable("id") Long userId) {
+		
+		RequestAudit req = new RequestAudit();
+		req.setEntityType(User.class.getSimpleName());
+		req.setEntityId(userId);
+		
+		RequestEvent<RequestAudit> reqEvent = new RequestEvent<RequestAudit>(req);
+		ResponseEvent<AuditDetail> resp = auditSvc.getAuditDetail(reqEvent);
 		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}

@@ -15,11 +15,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import com.krishagni.catissueplus.core.administrative.domain.Institute;
 import com.krishagni.catissueplus.core.administrative.events.InstituteDetail;
 import com.krishagni.catissueplus.core.administrative.events.InstituteQueryCriteria;
 import com.krishagni.catissueplus.core.administrative.events.InstituteSummary;
 import com.krishagni.catissueplus.core.administrative.repository.InstituteListCriteria;
 import com.krishagni.catissueplus.core.administrative.services.InstituteService;
+import com.krishagni.catissueplus.core.audit.AuditService;
+import com.krishagni.catissueplus.core.audit.events.AuditDetail;
+import com.krishagni.catissueplus.core.audit.events.RequestAudit;
 import com.krishagni.catissueplus.core.common.events.DeleteEntityOp;
 import com.krishagni.catissueplus.core.common.events.DependentEntityDetail;
 import com.krishagni.catissueplus.core.common.events.RequestEvent;
@@ -34,6 +38,9 @@ public class InstitutesController {
 
 	@Autowired
 	private HttpServletRequest httpServletRequest;
+	
+	@Autowired
+	private AuditService auditSvc;
 	
 	@RequestMapping(method = RequestMethod.GET)
 	@ResponseBody
@@ -140,6 +147,21 @@ public class InstitutesController {
 		ResponseEvent<InstituteDetail> resp = instituteSvc.deleteInstitute(req);
 		resp.throwErrorIfUnsuccessful();
 		
+		return resp.getPayload();
+	}
+	
+	@RequestMapping(method = RequestMethod.GET, value="/{id}/audit-trail")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody	
+	public AuditDetail getAuditDetails(@PathVariable("id") Long instId) {
+		
+		RequestAudit req = new RequestAudit();
+		req.setEntityType(Institute.class.getSimpleName());
+		req.setEntityId(instId);
+		
+		RequestEvent<RequestAudit> reqEvent = new RequestEvent<RequestAudit>(req);
+		ResponseEvent<AuditDetail> resp = auditSvc.getAuditDetail(reqEvent);
+		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}
 }

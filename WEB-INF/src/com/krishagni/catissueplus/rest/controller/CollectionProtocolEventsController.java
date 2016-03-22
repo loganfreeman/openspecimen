@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import com.krishagni.catissueplus.core.audit.AuditService;
+import com.krishagni.catissueplus.core.audit.events.AuditDetail;
+import com.krishagni.catissueplus.core.audit.events.RequestAudit;
+import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolEvent;
 import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolEventDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CopyCpeOpDetail;
 import com.krishagni.catissueplus.core.biospecimen.services.CollectionProtocolService;
@@ -30,6 +34,9 @@ public class CollectionProtocolEventsController {
 	
 	@Autowired
 	private HttpServletRequest httpServletRequest;	
+	
+	@Autowired
+	private AuditService auditSvc;
 
 	@RequestMapping(method = RequestMethod.GET)
 	@ResponseStatus(HttpStatus.OK)
@@ -95,6 +102,20 @@ public class CollectionProtocolEventsController {
 	@ResponseBody	
 	public CollectionProtocolEventDetail deleteEvent(@PathVariable("eventId") Long eventId) {
 		ResponseEvent<CollectionProtocolEventDetail> resp = cpSvc.deleteEvent(new RequestEvent<Long>(eventId));
+		resp.throwErrorIfUnsuccessful();
+		return resp.getPayload();
+	}
+	
+	@RequestMapping(method = RequestMethod.GET, value="/{id}/audit-trail")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody	
+	public AuditDetail getAuditDetails(@PathVariable("id") Long cpeId) {
+		
+		RequestAudit req = new RequestAudit();
+		req.setEntityType(CollectionProtocolEvent.class.getSimpleName());
+		req.setEntityId(cpeId);
+		
+		ResponseEvent<AuditDetail> resp = auditSvc.getAuditDetail(getRequest(req));
 		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}
