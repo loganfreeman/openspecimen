@@ -92,7 +92,10 @@ public class StorageContainersController {
 			Boolean storeSpecimensEnabled,
 			
 			@RequestParam(value = "hierarchical", required = false, defaultValue = "false")
-			boolean hierarchical
+			boolean hierarchical,
+			
+			@RequestParam(value = "typeName", required = false)
+			String typeName
 			) {
 		
 		StorageContainerListCriteria crit = new StorageContainerListCriteria()
@@ -109,7 +112,8 @@ public class StorageContainersController {
 			.cpIds(cpIds)
 			.cpShortTitles(cpShortTitles)
 			.storeSpecimensEnabled(storeSpecimensEnabled)
-			.hierarchical(hierarchical);
+			.hierarchical(hierarchical)
+			.typeName(typeName);
 					
 		RequestEvent<StorageContainerListCriteria> req = new RequestEvent<StorageContainerListCriteria>(crit);
 		ResponseEvent<List<StorageContainerSummary>> resp = storageContainerSvc.getStorageContainers(req);

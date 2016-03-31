@@ -1,5 +1,5 @@
 <div>
-  <div os-page-header>
+  <div os-page-header ng-if="!mode">
     <h3> 
       <span translate="container.list">Storage Containers</span>
     </h3>
@@ -49,7 +49,7 @@
     </div>
   </div>
 
-  <div class="container">
+  <div ng-class="mode ? 'clearfix' : 'container'">
     <table class="os-table os-table-hover">
       <thead class="os-table-head">
         <tr class="row">

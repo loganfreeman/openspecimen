@@ -32,6 +32,8 @@ public class StorageContainerListCriteria extends AbstractListCriteria<StorageCo
 
 	private Set<Long> siteIds;
 	
+	private String typeName;
+	
 	@Override
 	public StorageContainerListCriteria self() {
 		return this;
@@ -145,7 +147,7 @@ public class StorageContainerListCriteria extends AbstractListCriteria<StorageCo
 		this.cpShortTitles = cpShortTitles;
 		return self();
 	}
-
+	
 	public StorageContainerListCriteria cpShortTitles(String[] cpShortTitles) {
 		if (cpShortTitles != null && cpShortTitles.length > 0) {
 			this.cpShortTitles = new HashSet<String>(Arrays.asList(cpShortTitles));
@@ -162,5 +164,14 @@ public class StorageContainerListCriteria extends AbstractListCriteria<StorageCo
 	
 	public void siteIds(Set<Long> siteIds) {
 		this.siteIds = siteIds;
+	}
+	
+	public String typeName() {
+		return typeName;
+	}
+	
+	public StorageContainerListCriteria typeName(String typeName) {
+		this.typeName = typeName;
+		return self();
 	}
 }

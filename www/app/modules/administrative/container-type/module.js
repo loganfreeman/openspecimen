@@ -56,5 +56,11 @@ angular.module('os.administrative.containertype',
         templateUrl: 'modules/administrative/container-type/overview.html',
         parent: 'container-type-detail'
       })
+      .state("container", {
+        url: '/containers?typeName',
+        templateUrl: 'modules/administrative/container/list.html',
+        controller: 'ContainerListCtrl',
+        parent: 'container-type-detail'
+      })
   });
 

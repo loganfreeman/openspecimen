@@ -98,6 +98,7 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 			addStoreSpecimenRestriction();
 			
 			addParentRestriction();
+			addTypeRestriction();
 			
 			String hql = new StringBuilder(select)
 				.append(" ").append(from)
@@ -267,6 +268,17 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 			}
 			
 			params.put("storeSpecimenEnabled", crit.storeSpecimensEnabled());
+		}
+		
+		private void addTypeRestriction() {
+			if (StringUtils.isBlank(crit.typeName())) {
+				return;
+			}
+			
+			from.append(" join c.type ct");
+			addAnd();
+			where.append("ct.name = :typeName");
+			params.put("typeName", crit.typeName());
 		}
 	}
 }
