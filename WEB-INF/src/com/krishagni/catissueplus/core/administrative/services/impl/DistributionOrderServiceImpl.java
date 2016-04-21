@@ -363,7 +363,7 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 
 		if (specimens.size() != specimenLabels.size()) {
 			List<String> labels = (List<String>) CollectionUtils.subtract(specimenLabels,  Utility.<List<String>>collect(specimens, "label"));
-			ose.addError(DistributionOrderErrorCode.SPECIMEN_DOES_NOT_EXIST, labels.stream().collect(Collectors.joining(", ")));
+			ose.addError(DistributionOrderErrorCode.SPECIMEN_DOES_NOT_EXIST, labels);
 			return null;
 		}
 		
