@@ -121,12 +121,14 @@ angular.module('openspecimen')
 
           var valLabel = angular.element("<span></span>")
             .attr("ng-if", "!(" + tAttrs.editWhen + ")")
-            .append("{{" + tAttrs.ngModel + "}}");
+            .append("{{" + tAttrs.ngModel + "}}")
+            .attr("title", "{{" + tAttrs.ngModel + "}}");
 
          
           div = angular.element("<div></div>")
             .append(inputDiv)
-            .append(valLabel);
+            .append(valLabel)
+            .addClass("os-ellipsis");
         } else {
           div = inputDiv;
         }
