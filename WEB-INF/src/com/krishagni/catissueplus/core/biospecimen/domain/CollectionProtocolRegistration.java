@@ -2,23 +2,27 @@
 package com.krishagni.catissueplus.core.biospecimen.domain;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.ParticipantErrorCode;
-import com.krishagni.catissueplus.core.biospecimen.repository.DaoFactory;
-import com.krishagni.catissueplus.core.common.CollectionUpdater;
 import com.krishagni.catissueplus.core.common.errors.OpenSpecimenException;
 import com.krishagni.catissueplus.core.common.events.DependentEntityDetail;
+import com.krishagni.catissueplus.core.common.service.LabelGenerator;
 import com.krishagni.catissueplus.core.common.util.Status;
 import com.krishagni.catissueplus.core.common.util.Utility;
 
@@ -54,7 +58,8 @@ public class CollectionProtocolRegistration {
 	private String barcode;
 	
 	@Autowired
-	private DaoFactory daoFactory;
+	@Qualifier("ppidGenerator")
+	private LabelGenerator labelGenerator;
 
 	public static String getEntityName() {
 		return ENTITY_NAME;
@@ -107,6 +112,29 @@ public class CollectionProtocolRegistration {
 
 	public void setVisits(Collection<Visit> visits) {
 		this.visits = visits;
+	}
+
+	public List<Visit> getOrderedVisits() {
+		if (getVisits() == null) {
+			return Collections.emptyList();
+		}
+
+		return getVisits().stream()
+			.sorted((v1, v2) -> v1.getVisitDate().compareTo(v2.getVisitDate()))
+			.collect(Collectors.toList());
+	}
+
+	public Visit getLatestVisit() {
+		List<Visit> sortedVisits = getOrderedVisits();
+		if (CollectionUtils.isEmpty(sortedVisits)) {
+			return null;
+		}
+
+		return sortedVisits.get(sortedVisits.size() - 1);
+	}
+
+	public Visit getVisitByName(String visitName) {
+		return getVisits().stream().filter(v -> v.getName().equals(visitName)).findFirst().orElse(null);
 	}
 
 	public String getActivityStatus() {
@@ -229,7 +257,7 @@ public class CollectionProtocolRegistration {
 		setConsentSignDate(consentResponses.getConsentSignDate());
 		setConsentWitness(consentResponses.getConsentWitness());
 		setConsentComments(consentResponses.getConsentComments());
-		setConsentTierResponses(consentResponses.getConsentResponses());
+		updateConsentResponses(consentResponses.getConsentResponses());
 	}
 	
 	public void setPpidIfEmpty() {
@@ -240,11 +268,10 @@ public class CollectionProtocolRegistration {
 		CollectionProtocol cp = getCollectionProtocol();
 		String ppidFmt = cp.getPpidFormat();
 		if (StringUtils.isNotBlank(ppidFmt)) {
-			Long uniqueId = daoFactory.getUniqueIdGenerator().getUniqueId("PPID", cp.getId().toString());
-			setPpid(String.format(ppidFmt, uniqueId.intValue()));
+			setPpid(labelGenerator.generateLabel(ppidFmt, this));
 		} else {
 			setPpid(cp.getId() + "_" + participant.getId());
-		}		
+		}
 	}
 	
 	public void addVisits(Collection<Visit> visits) {
@@ -254,11 +281,20 @@ public class CollectionProtocolRegistration {
 		}
 	}
 
-	private void setConsentTierResponses(Collection<ConsentTierResponse> consentResponses) {
-		CollectionUpdater.update(getConsentResponses(), consentResponses);
-		for (ConsentTierResponse resp : getConsentResponses()) {
-			resp.setCpr(this);
+	private void updateConsentResponses(Collection<ConsentTierResponse> consentResponses) {
+		Map<String, ConsentTierResponse> existingResps = getConsentResponses().stream()
+			.collect(Collectors.toMap(resp -> resp.getConsentTier().getStatement(), resp -> resp));
+
+		for(ConsentTierResponse newResp : consentResponses) {
+			ConsentTierResponse existingResp = existingResps.remove(newResp.getConsentTier().getStatement());
+			if (existingResp == null) {
+				getConsentResponses().add(newResp);
+			} else {
+				existingResp.setResponse(newResp.getResponse());
+			}
 		}
+		
+		getConsentResponses().removeAll(existingResps.values());
 	}
 
 	private void ensureNoActiveChildObjects() {

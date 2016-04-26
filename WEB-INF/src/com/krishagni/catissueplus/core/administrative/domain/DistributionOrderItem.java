@@ -35,7 +35,11 @@ public class DistributionOrderItem extends BaseEntity {
 
 	private Date returnDate;
 
+	private Integer freezeThawIncrOnReturn;
+
 	private String returnComments;
+
+	private transient SpecimenRequestItem requestItem;
 
 	public DistributionOrder getOrder() {
 		return order;
@@ -117,6 +121,14 @@ public class DistributionOrderItem extends BaseEntity {
 		this.returnDate = returnDate;
 	}
 
+	public Integer getFreezeThawIncrOnReturn() {
+		return freezeThawIncrOnReturn;
+	}
+
+	public void setFreezeThawIncrOnReturn(Integer freezeThawIncrOnReturn) {
+		this.freezeThawIncrOnReturn = freezeThawIncrOnReturn;
+	}
+
 	public String getReturnComments() {
 		return returnComments;
 	}
@@ -129,11 +141,27 @@ public class DistributionOrderItem extends BaseEntity {
 		return getStatus() == Status.DISTRIBUTED_AND_CLOSED;
 	}
 
+	public SpecimenRequestItem getRequestItem() {
+		return requestItem;
+	}
+
+	public void setRequestItem(SpecimenRequestItem requestItem) {
+		this.requestItem = requestItem;
+	}
+
 	public boolean isReturned() { return getStatus() == Status.RETURNED; }
 
 	public void distribute() {
+		if (requestItem != null) {
+			requestItem.throwErrorIfFulfilled();
+		}
+
 		order.addOnSaveProc(() -> specimen.distribute(this));
-	}
+
+		if (requestItem != null) {
+			requestItem.distribute(getOrder());
+		}
+	}	
 
 	public void returnSpecimen() {
 		specimen.returnSpecimen(this);

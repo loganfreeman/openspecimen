@@ -4,6 +4,24 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
 
+  <changeSet author="ckhilosiya" id="Freeze/thaw cycles field for specimen">
+    <addColumn tableName="CATISSUE_SPECIMEN">
+      <column name="FREEZE_THAW_CYCLES" type="${mediumint.type}" defaultValue="0"/>
+    </addColumn>
+  </changeSet>
+
+  <changeSet author="ckhilosiya" id="Track whether freeze/thaw cycle of specimen was incremented when frozen event was created">
+    <addColumn tableName="CATISSUE_FROZEN_EVENT_PARAM">
+      <column name="INCREMENT_FREEZE_THAW" type="${boolean.type}" defaultValueBoolean="false"/>
+    </addColumn>
+  </changeSet>
+
+  <changeSet author="ckhilosiya" id="Track whether freeze/thaw cycle of specimen was incremented when thaw event was created">
+    <addColumn tableName="CATISSUE_THAW_EVENT_PARAMETERS">
+      <column name="INCREMENT_FREEZE_THAW" type="${boolean.type}" defaultValueBoolean="false"/>
+    </addColumn>
+  </changeSet>
+
   <changeSet author="ckhilosiya" id="Add return specimens fields to order items table">
     <addColumn tableName="OS_ORDER_ITEMS">
       <column name="RETURNED_QUANTITY" type="${double.type}"></column>
@@ -34,13 +52,20 @@
       referencedColumnNames="IDENTIFIER"/>
   </changeSet>
 
+  <changeSet author="ckhilosiya" id="Track by how much freeze/thaw cycle of specimen was incremented when it was returned">
+    <addColumn tableName="OS_ORDER_ITEMS">
+      <column name="FREEZE_THAW_INCR_ON_RETURN" type="${smallint.type}"></column>
+    </addColumn>
+  </changeSet>
+
   <changeSet author="ckhilosiya" id="Updated distribution view with return event details" runOnChange="true">
     <createView viewName="OS_SPMN_DISTRIBUTIONS_VIEW" replaceIfExists="true">
       select
         item.identifier as identifier, item.specimen_id as specimen_id, item.quantity as quantity, item.status as status,
         item.returned_quantity as returned_quantity, item.returning_container as returning_container,
         item.returning_row as returning_row, item.returning_column as returning_column,
-        item.returned_by as returned_by, item.return_date as return_date, item.return_comments as return_comments,
+        item.returned_by as returned_by, item.return_date as return_date,
+        item.freeze_thaw_incr_on_return as freeze_thaw_incr_on_return, item.return_comments as return_comments,
         ord.name as name, ord.requester_id as requester_id, ord.distributor_id as distributor_id,
         ord.execution_date as execution_date, ord.comments as comments, dp.short_title as dp_short_title
       from
@@ -65,11 +90,11 @@
         create table tmp_specimen_stats (
           specimen_id bigint(19) not null,
           collector_id bigint(19) default null,
-          collection_procedure varchar(50) not null,
-          collection_container varchar(50) not null,
+          collection_procedure varchar(50) default null,
+          collection_container varchar(50) default null,
           collection_time timestamp null default null,
           receiver_id bigint(19) default null,
-          received_quality varchar(255) not null,
+          received_quality varchar(255) default null,
           received_time timestamp null default null,
           frozen_time timestamp null default null,
           processing_time bigint(19) default null,
@@ -104,8 +129,8 @@
           re.event_timestamp as received_time, 
           re.received_quality as received_quality, re.user_id as receiver_id, 
           fe.event_timestamp as frozen_time,
-          MINUTE(TIMEDIFF(fe.event_timestamp, re.event_timestamp)) as processing_time,
-          MINUTE(TIMEDIFF(fe.event_timestamp, ce.event_timestamp)) as ischemia_time,
+          TIMESTAMPDIFF(MINUTE, re.event_timestamp,fe.event_timestamp) as processing_time,
+          TIMESTAMPDIFF(MINUTE, ce.event_timestamp, fe.event_timestamp) as ischemia_time,
           0
         from
           catissue_specimen s
@@ -204,11 +229,11 @@
         execute immediate 'create table tmp_specimen_stats (
           specimen_id number(19) not null,
           collector_id number(19) default null,
-          collection_procedure varchar2(50) not null,
-          collection_container varchar2(50) not null,
+          collection_procedure varchar2(50) default null,
+          collection_container varchar2(50) default null,
           collection_time timestamp default null,
           receiver_id number(19) default null,
-          received_quality varchar2(255) not null,
+          received_quality varchar2(255) default null,
           received_time timestamp default null,
           frozen_time timestamp default null,
           processing_time number(19) default null,
@@ -349,7 +374,7 @@
       //
     </sql>
   </changeSet>
-
+  
   <changeSet author="ckhilosiya" id="Making DP requirements specimen type optional">
     <dropNotNullConstraint
       tableName="OS_DP_REQUIREMENTS"
@@ -499,5 +524,281 @@
       end;
       //
     </sql>
+  </changeSet>
+
+  <changeSet author="vpawar" id="Specimen requests table">
+    <createTable tableName="OS_SPECIMEN_REQUESTS">
+      <column name="IDENTIFIER" type="${int.type}" autoIncrement="${autoIncrement}">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="CP_ID" type="${int.type}">
+        <constraints nullable="false" />
+      </column>
+
+      <column name="REQUESTOR_ID" type="${int.type}">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="REQUEST_DATE" type="${timestamp.type}">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="PROCESSOR_ID" type="${int.type}">
+      </column>
+
+      <column name="PROCESSING_DATE" type="${nullable.ts.type}">
+      </column>
+
+      <column name="COMMENTS" type="${text.type}(255)">
+      </column>
+
+      <column name="ACTIVITY_STATUS" type="${text.type}(16)">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet author="vpawar" id="Specimen requests sequence" dbms="oracle">
+    <createSequence
+      sequenceName="OS_SPECIMEN_REQUESTS_SEQ"
+      startValue="1"
+      incrementBy="1"
+      ordered="true"/>
+  </changeSet>
+
+  <changeSet author="vpawar" id="FK on specimen request CP">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_SPMN_REQS_CP_ID"
+      baseTableName="OS_SPECIMEN_REQUESTS"
+      baseColumnNames="CP_ID"
+      referencedTableName="CATISSUE_COLLECTION_PROTOCOL"
+      referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+
+  <changeSet author="vpawar" id="FK on specimen requestor">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_SPMN_REQS_REQUESTOR"
+      baseTableName="OS_SPECIMEN_REQUESTS"
+      baseColumnNames="REQUESTOR_ID"
+      referencedTableName="CATISSUE_USER"
+      referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+
+  <changeSet author="vpawar" id="FK on specimen request processor">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_SPMN_REQS_PROCESSOR"
+      baseTableName="OS_SPECIMEN_REQUESTS"
+      baseColumnNames="PROCESSOR_ID"
+      referencedTableName="CATISSUE_USER"
+      referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+
+  <changeSet author="vpawar" id="Specimen request specimens table">
+    <createTable tableName="OS_SPECIMEN_REQUEST_ITEMS">
+      <column name="IDENTIFIER" type="${int.type}" autoIncrement="${autoIncrement}">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="REQUEST_ID" type="${int.type}">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="SPECIMEN_ID" type="${int.type}">
+        <constraints nullable="false" />
+      </column>
+
+      <column name="STATUS" type="${text.type}(32)">
+        <constraints nullable="false" />
+      </column>
+
+      <column name="DISTRIBUTION_ID" type="${int.type}">
+      </column>
+
+      <column name="SHIPMENT_ID" type="${int.type}">
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet author="vpawar" id="Specimen request specimens sequence" dbms="oracle">
+    <createSequence
+      sequenceName="OS_SPECIMEN_REQUEST_ITEMS_SEQ"
+      startValue="1"
+      incrementBy="1"
+      ordered="true"/>
+  </changeSet>
+
+  <changeSet author="vpawar" id="FK on specimen request ID">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_REQ_SPMNS_REQ_ID"
+      baseTableName="OS_SPECIMEN_REQUEST_ITEMS"
+      baseColumnNames="REQUEST_ID"
+      referencedTableName="OS_SPECIMEN_REQUESTS"
+      referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+
+  <changeSet author="vpawar" id="FK on requested specimen ID">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_REQ_SPMNS_SPMN_ID"
+      baseTableName="OS_SPECIMEN_REQUEST_ITEMS"
+      baseColumnNames="SPECIMEN_ID"
+      referencedTableName="CATISSUE_SPECIMEN"
+      referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+
+  <changeSet author="vpawar" id="FK on requested specimen distribution ID">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_REQ_SPMNS_DIST_ID"
+      baseTableName="OS_SPECIMEN_REQUEST_ITEMS"
+      baseColumnNames="DISTRIBUTION_ID"
+      referencedTableName="OS_ORDERS"
+      referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+
+  <changeSet author="vpawar" id="FK on requested specimen shipment ID">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_REQ_SPMNS_SHIP_ID"
+      baseTableName="OS_SPECIMEN_REQUEST_ITEMS"
+      baseColumnNames="SHIPMENT_ID"
+      referencedTableName="OS_SHIPMENTS"
+      referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+
+  <changeSet author="vpawar" id="Request for which distribution is created">
+    <addColumn tableName="OS_ORDERS">
+      <column name="REQUEST_ID" type="${int.type}">
+      </column>
+    </addColumn>
+  </changeSet>
+
+  <changeSet author="vpawar" id="Foreign key on distribution order request">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_ORDERS_REQ_ID"
+      baseTableName="OS_ORDERS"
+      baseColumnNames="REQUEST_ID"
+      referencedTableName="OS_SPECIMEN_REQUESTS"
+      referencedColumnNames="IDENTIFIER" />
+  </changeSet>
+
+  <changeSet author="vpawar" id="Request for which the shipment is created">
+    <addColumn tableName="OS_SHIPMENTS">
+      <column name="REQUEST_ID" type="${int.type}">
+      </column>
+    </addColumn>
+  </changeSet>
+
+  <changeSet author="vpawar" id="Foreign key on shipment request">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_SHIPMENTS_REQ_ID"
+      baseTableName="OS_SHIPMENTS"
+      baseColumnNames="REQUEST_ID"
+      referencedTableName="OS_SPECIMEN_REQUESTS"
+      referencedColumnNames="IDENTIFIER" />
+  </changeSet>
+
+  <changeSet author="mdnasim" id="Container types">
+    <createTable tableName="OS_CONTAINER_TYPES">
+      <column name="IDENTIFIER" type="${int.type}" autoIncrement="${autoIncrement}">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="NAME" type="${text.type}(64)">
+        <constraints unique="true" nullable="false"/>
+      </column>
+
+      <column name="NAME_FORMAT" type="${text.type}(255)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="TEMPERATURE" type="${double.type}">
+      </column>
+
+      <column name="NO_OF_COLS" type="${int.type}">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="NO_OF_ROWS" type="${int.type}">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="COLUMN_LABELING_SCHEME" type="${text.type}(64)" defaultValue="Numbers">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="ROW_LABELING_SCHEME" type="${text.type}(64)" defaultValue="Numbers">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="STORE_SPECIMENS" type="${boolean.type}" defaultValue="0">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="CAN_HOLD" type="${int.type}">
+      </column>
+
+      <column name="ACTIVITY_STATUS" type="${text.type}(16)">
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet author="mdnasim" id="FK on container types can hold">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_CONT_TYPE_CAN_HOLD"
+      baseTableName="OS_CONTAINER_TYPES"
+      baseColumnNames="CAN_HOLD"
+      referencedTableName="OS_CONTAINER_TYPES"
+      referencedColumnNames="IDENTIFIER" />
+  </changeSet>
+
+  <changeSet author="mdnasim" id="Container types sequence" dbms="oracle">
+    <createSequence
+      sequenceName="OS_CONTAINER_TYPES_SEQ"
+      startValue="1"
+      incrementBy="1"
+      ordered="true" />
+  </changeSet>
+
+  <changeSet author="mdnasim" id="Column to specify container type">
+    <addColumn tableName="OS_STORAGE_CONTAINERS">
+      <column name="TYPE_ID" type="${int.type}">
+      </column>
+    </addColumn>
+  </changeSet>
+
+  <changeSet author="mdnasim" id="FK on container type">
+    <addForeignKeyConstraint
+      constraintName="FK_OS_ST_CONT_TYPE_ID"
+      baseTableName="OS_STORAGE_CONTAINERS"
+      baseColumnNames="TYPE_ID"
+      referencedTableName="OS_CONTAINER_TYPES"
+      referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+  
+  <changeSet author="nmarwaha" id="Updated the CP coordinator view" runOnChange="true">
+    <sql>
+      create or replace view cp_coord_view as (
+        select 
+          u.identifier as identifier, u.first_name as first_name, u.last_name as last_name,
+          u.email_address as email_address, cpcrd.collection_protocol_id as cp_id, d.name as department_name, 
+          i.name as institute_name
+        from 
+          catissue_coll_coordinators cpcrd 
+          join catissue_user u on cpcrd.user_id = u.identifier 
+          join os_departments d on u.department_id = d.identifier
+          join catissue_institution i on i.identifier = d.institute_id
+      )
+    </sql>
+  </changeSet>
+  
+  <changeSet author="vlonushte" id="Replace fixed string based ppid format with token based format">
+    <customChange class="com.krishagni.catissueplus.core.upgrade.CpPpidFormatUpdater"></customChange>
+  </changeSet>
+
+  <changeSet author="vgaikwad" id="Number of copies of labels to print">
+    <addColumn tableName="OS_LABEL_PRINT_JOB_ITEMS">
+      <column name="COPIES" type="${int.type}" defaultValueNumeric="1">
+        <constraints nullable="false"/>
+      </column>
+    </addColumn>
   </changeSet>
 </databaseChangeLog>

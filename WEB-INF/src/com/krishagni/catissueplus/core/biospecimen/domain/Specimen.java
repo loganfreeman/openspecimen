@@ -50,6 +50,8 @@ public class Specimen extends BaseExtensionEntity {
 	
 	public static final String ACCEPTABLE = "Acceptable";
 	
+	public static final String NOT_SPECIFIED = "Not Specified";
+	
 	private static final String ENTITY_NAME = "specimen";
 
 	private String tissueSite;
@@ -86,6 +88,8 @@ public class Specimen extends BaseExtensionEntity {
 	
 	private Set<String> biohazards = new HashSet<String>();
 
+	private Integer freezeThawCycles;
+
 	private Visit visit;
 
 	private SpecimenRequirement specimenRequirement;
@@ -111,7 +115,7 @@ public class Specimen extends BaseExtensionEntity {
 	private Set<SpecimenList> specimenLists =  new HashSet<SpecimenList>();
 	
 	private boolean concentrationInit = false;
-	
+
 	@Autowired
 	@Qualifier("specimenLabelGenerator")
 	private LabelGenerator labelGenerator;
@@ -119,7 +123,9 @@ public class Specimen extends BaseExtensionEntity {
 	private transient boolean forceDelete;
 	
 	private transient boolean printLabel;
-	
+
+	private transient boolean freezeThawIncremented;
+
 	public static String getEntityName() {
 		return ENTITY_NAME;
 	}
@@ -352,6 +358,14 @@ public class Specimen extends BaseExtensionEntity {
 		for (Specimen poolSpecimen : getSpecimensPool()) {
 			poolSpecimen.updateBiohazards(biohazards);
 		}
+	}
+
+	public Integer getFreezeThawCycles() {
+		return freezeThawCycles;
+	}
+
+	public void setFreezeThawCycles(Integer freezeThawCycles) {
+		this.freezeThawCycles = freezeThawCycles;
 	}
 
 	public Visit getVisit() {
@@ -608,7 +622,7 @@ public class Specimen extends BaseExtensionEntity {
 		}
 		
 		setActivityStatus(Status.ACTIVITY_STATUS_ACTIVE.getStatus());
-		if (NumUtil.greaterThanZero(getAliquotQuantity())) {
+		if (NumUtil.greaterThanZero(getAvailableQuantity())) {
 			setIsAvailable(true);
 		}
 		
@@ -673,6 +687,7 @@ public class Specimen extends BaseExtensionEntity {
 		setExtension(specimen.getExtension());
 		setPrintLabel(specimen.isPrintLabel());
 		updatePosition(specimen.getPosition());
+		setFreezeThawCycles(specimen.getFreezeThawCycles());
 		checkQtyConstraints();
 	}
 	
@@ -793,8 +808,8 @@ public class Specimen extends BaseExtensionEntity {
 
 	public void returnSpecimen(DistributionOrderItem item) {
 		if (isClosed()) {
-			activate();
 			setAvailableQuantity(item.getReturnedQuantity());
+			activate();
 		} else {
 			setAvailableQuantity(getAvailableQuantity().add(item.getReturnedQuantity()));
 		}
@@ -1008,6 +1023,24 @@ public class Specimen extends BaseExtensionEntity {
 		}
 		
 		return getDesc(specimenClass, specimenType);
+	}
+
+	public void incrementFreezeThaw(Integer incrementFreezeThaw) {
+		if (freezeThawIncremented) {
+			return;
+		}
+
+		if (incrementFreezeThaw == null || incrementFreezeThaw <= 0) {
+			return;
+		}
+
+		if (getFreezeThawCycles() == null) {
+			setFreezeThawCycles(incrementFreezeThaw);
+		} else {
+			setFreezeThawCycles(getFreezeThawCycles() + incrementFreezeThaw);
+		}
+
+		freezeThawIncremented = true;
 	}
 	
 	public static String getDesc(String specimenClass, String type) {

@@ -13,10 +13,19 @@ angular.module('os.biospecimen.specimenlist',
         url: '/specimen-list?listId',
         templateUrl: 'modules/biospecimen/specimen-list/list.html',
         controller: 'SpecimenListsCtrl',
+        resolve: {
+          reqBasedDistOrShip: function($injector) {
+            if ($injector.has('spmnReqCfgUtil')) {
+              return $injector.get('spmnReqCfgUtil').isReqBasedDistOrShippingEnabled();
+            } else {
+              return {value: false};
+            }
+          }
+        },
         parent: 'signed-in'
       })
       .state('specimen-list-addedit', {
-        url: '/specimen-list-addedit/:listId',
+        url: '/specimen-list/:listId/addedit',
         templateUrl: 'modules/biospecimen/specimen-list/addedit.html',
         resolve: {
           list: function($stateParams, SpecimenList) {

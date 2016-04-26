@@ -154,11 +154,11 @@ public class AccessCtrlMgr {
 	//                                                                                  //
 	//////////////////////////////////////////////////////////////////////////////////////
 	public Set<Long> getReadableCpIds() {
-		return getEligibleCpIds(Resource.CP.getName(), Operation.READ.getName(), null);
+		return getEligibleCpIds(Resource.CP.getName(), new String[] {Operation.READ.getName()}, null);
 	}
 
 	public Set<Long> getRegisterEnabledCpIds(List<String> siteNames) {
-		return getEligibleCpIds(Resource.PARTICIPANT.getName(), Operation.CREATE.getName(), siteNames);
+		return getEligibleCpIds(Resource.PARTICIPANT.getName(), new String[] {Operation.CREATE.getName()}, siteNames);
 	}
 
 	public void ensureCreateCpRights(CollectionProtocol cp) {
@@ -542,6 +542,23 @@ public class AccessCtrlMgr {
 
 		return siteCpPairs;
 	}
+	
+	//////////////////////////////////////////////////////////////////////////////////////
+	//                                                                                  //
+	//         Container type object access control helper methods                      //
+	//                                                                                  //
+	//////////////////////////////////////////////////////////////////////////////////////
+	public void ensureReadContainerTypeRights() {
+		if (AuthUtil.isAdmin()) {
+			return;
+		}
+		
+		User user = AuthUtil.getCurrentUser();
+		Operation[] ops = {Operation.READ};
+		if (!canUserPerformOp(user.getId(), Resource.STORAGE_CONTAINER, ops)) {
+			throw OpenSpecimenException.userError(RbacErrorCode.ACCESS_DENIED);
+		} 
+	}
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	//                                                                                  //
@@ -628,13 +645,21 @@ public class AccessCtrlMgr {
 		return canUserPerformOp(userId, Resource.ORDER, new Operation[] {Operation.CREATE, Operation.UPDATE});
 	}
 	
-	public Set<Long> getCreateUpdateAccessDistributionOrderSites() {
+	public Set<Long> getCreateUpdateAccessDistributionOrderSiteIds() {
+		Set<Site> sites = getCreateUpdateAccessDistributionOrderSites();
+		if (sites == null) {
+			return null;
+		}
+
+		return Utility.collect(sites, "id", true);
+	}
+
+	public Set<Site> getCreateUpdateAccessDistributionOrderSites() {
 		if (AuthUtil.isAdmin()) {
 			return null;
 		}
 		
-		Set<Site> sites = getSites(Resource.ORDER, new Operation[]{Operation.CREATE, Operation.UPDATE});
-		return Utility.<Set<Long>>collect(sites, "id", true);
+		return getSites(Resource.ORDER, new Operation[] {Operation.CREATE, Operation.UPDATE});
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -753,15 +778,17 @@ public class AccessCtrlMgr {
 
 		return results;
 	}
-	
+
 	public Set<Long> getEligibleCpIds(String resource, String op, List<String> siteNames) {
+		return getEligibleCpIds(resource, new String[] {op}, siteNames);
+	}
+
+	public Set<Long> getEligibleCpIds(String resource, String[] ops, List<String> siteNames) {
 		if (AuthUtil.isAdmin()) {
 			return null;
 		}
 
 		Long userId = AuthUtil.getCurrentUser().getId();
-		String[] ops = {op};
-
 		List<SubjectAccess> accessList = null;
 		if (CollectionUtils.isEmpty(siteNames)) {
 			accessList = daoFactory.getSubjectDao().getAccessList(userId, resource, ops);
@@ -883,7 +910,7 @@ public class AccessCtrlMgr {
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	//                                                                                  //
-	//          Scheduled Job object access control helper methods              //
+	//          Scheduled Job object access control helper methods                      //
 	//                                                                                  //
 	//////////////////////////////////////////////////////////////////////////////////////
 	public void ensureReadScheduledJobRights() {
@@ -935,22 +962,38 @@ public class AccessCtrlMgr {
 	//                                                                   //
 	///////////////////////////////////////////////////////////////////////
 
-	public Set<Long> getReadAccessShipmentSites() {
+	public Set<Long> getReadAccessShipmentSiteIds() {
+		Set<Site> sites = getReadAccessShipmentSites();
+		if (sites == null) {
+			return null;
+		}
+
+		return Utility.collect(sites, "id", true);
+	}
+
+	public Set<Site> getReadAccessShipmentSites() {
 		if (AuthUtil.isAdmin()) {
 			return null;
 		}
 		
-		return Utility.<Set<Long>>collect(getSites(Resource.SHIPPING_N_TRACKING, Operation.READ), "id", true);
+		return getSites(Resource.SHIPPING_N_TRACKING, Operation.READ);
 	}
 	
-	public Set<Long> getCreateUpdateAccessShipmentSites() {
+	public Set<Long> getCreateUpdateAccessShipmentSiteIds() {
+		Set<Site> sites = getCreateUpdateAccessShipmentSites();
+		if (sites == null) {
+			return null;
+		}
+
+		return Utility.collect(sites, "id", true);
+	}
+
+	public Set<Site> getCreateUpdateAccessShipmentSites() {
 		if (AuthUtil.isAdmin()) {
 			return null;
 		}
 		
-		Set<Site> allowedSites = getSites(Resource.SHIPPING_N_TRACKING,
-				new Operation[] {Operation.CREATE, Operation.UPDATE});
-		return Utility.<Set<Long>>collect(allowedSites, "id", true);
+		return getSites(Resource.SHIPPING_N_TRACKING, new Operation[] {Operation.CREATE, Operation.UPDATE});
 	}
 	
 	public void ensureReadShipmentRights(Shipment shipment) {
@@ -958,7 +1001,7 @@ public class AccessCtrlMgr {
 			return;
 		}
 		
-		Set<Site> allowedSites = getSites(Resource.SHIPPING_N_TRACKING, Operation.READ);
+		Set<Site> allowedSites = getReadAccessShipmentSites();
 		if (allowedSites.contains(shipment.getSendingSite())) {
 			return; // sender can read
 		}
@@ -1020,5 +1063,4 @@ public class AccessCtrlMgr {
 
 		return allowed;
 	}
-
 }

@@ -3,6 +3,7 @@
     "navigate_to": "Navigate To",
     "home": "Home",
     "collection_protocols": "Collection Protocols",
+    "rde": "Specimen Collection",
     "settings": "Settings",
     "users": "Users",
     "institutes": "Institutes",
@@ -19,6 +20,7 @@
     "training": "Training",
 
     "cp_desc": "Create, update SOP of visits and specimens",
+    "rde_desc": "Rapidly capture patients, visits and specimens data",
     "dp_desc": "Create, update procedures for distributing specimens",
     "institutes_desc": "Update information about institutions",
     "users_desc": "Add, rename and manage users",
@@ -50,6 +52,7 @@
     "recent_activity": "Recent Activity",
     "no_file_selected": "No File Selected",
     "view_jobs": "View Jobs",
+    "view_import_jobs": "View Import Jobs",
     "digits": "digits",
     "not_specified": "Not Specified",
     "enabled": "Enabled",
@@ -61,6 +64,8 @@
     "build_version": "Version",
     "build_date": "Build date",
     "build_commit_revision": "Revision",
+    "close": "Close",
+    "close_reason": "Reason for closing",
     "confirm_navigation": " You've unsaved form changes. If you navigate away from this page without submitting form, the changes will be lost. Are you sure you want to leave this page?",
     "footer_note": "<a href=\"http://www.openspecimen.org\" target=\"_blank\">OpenSpecimen</a> - powered by <a href=\"http://www.krishagni.com\" target=\"_blank\">Krishagni</a>",
 
@@ -94,12 +99,14 @@
       "add_another": "Add Another",
       "download": "Download",
       "reset_password": "Reset Password",
-      "print": "Print"
+      "print": "Print",
+      "skip": "Skip",
+      "back": "Back"
     }
   },
 
   "form_errors": {
-    "required": "Please fill out this field",
+    "required": "Please fill this field",
     "min": "This field value is too less",
     "minlength": "This field value is too short",
     "maxlength": "This field value is too long",
@@ -140,9 +147,6 @@
     "end_date": "End Date",
     "ethics_approval_id": "Ethics Approval ID",
     "ppid_fmt": "PPID Format",
-    "ppid_prefix": "Prefix",
-    "ppid_digits": "No. of digits",
-    "ppid_suffix": "Suffix",
     "clinical_diagnoses": "Clinical Diagnoses",
     "anticipated_participants_cnt": "Anticipated Participants Count",
     "desc_url": "Description URL",
@@ -323,6 +327,8 @@
     "bulk_import_master_specimens": "Bulk Import Master Specimens",
     "part_updates": "Participant Updates",
     "part_extensions": "Participant Forms",
+    "consents": "Consents",
+    "bulk_import_consents": "Bulk Import Consents",
     "registrations": "Participant Registrations",
     "master_specimens": "Master Specimens",
     "registered_cps": "Registered Protocols",
@@ -455,6 +461,8 @@
     "qty_per_aliquot": "Quantity per Aliquot",
     "close_parent_q": "Do you want to close parent specimen?",
     "concentration": "Concentration",
+    "freeze_thaw_cycles": "Freeze/Thaw Cycles",
+    "increment_parent_freeze_thaw": "Increment parent specimen's Freeze/Thaw cycles?",
     "comments": "Comments",
     "qty": "Quantity",
     "aliquot": "Aliquot",
@@ -520,6 +528,7 @@
     "create_aliquots": "Create Aliquots",
     "specimen_type": "Specimen Type",
     "anatomic_site": "Anatomic Site",
+    "freeze_thaw_cycle_lt_parent": "Child specimen's freeze/thaw cycle count can not be less than that of parent specimen",
 
     "col_event": {
       "title": "Collection Details",
@@ -924,8 +933,8 @@
     "list": "Containers",
     "name": "Name",
     "barcode": "Barcode",
+    "type": "Type",
     "create_container": "Create Storage Container",
-    "update_container": "Update Storage Container",
     "parent_container": "Parent Container",
     "parent_site": "Parent Site",
     "site": "Site",
@@ -945,8 +954,8 @@
     "child_containers": "Child Containers",
     "free_locations": "Free Locations",
     "no_container_selected": "Please select a container",
-    "cannot_hold_specimen": "Selected container cannot hold specimen for which position is being selected",
-    "stores_specimens": "Stores Specimens",
+    "cannot_hold_specimen": "Selected container cannot hold specimen for which the position is selected",
+    "stores_specimens": "Will Store Specimens?",
     "confirm_delete": "{{entityType}} {{entityName}} and its child containers will be deleted forever. Are you sure you want to proceed?",
     "assign_positions": "Assign Positions",
     "vacate_positions": "Vacate existing specimens",
@@ -968,13 +977,17 @@
     "pos_selector": "Container Position Selector",
     "selected_pos": "Selected Position: ",
 
-    "bulk_import": "Import Storage Containers",
-    "bulk_import_jobs": "Import Storage Containers Jobs List",
+    "bulk_import": "Import Containers",
+    "bulk_import_jobs": "Import Containers Jobs List",
+
+    "creating_hierarchy": "Create Hierarchy?",
+    "num_of_containers": "Number of Containers",
+    "hierarchy_created_successfully": "Container hierarchy of type {{typeName}} created successfully.",
 
     "tooltip": {
-      "view_details": "Click to view Storage Container details",
-      "add": "Click to add new Storage Container",
-      "edit": "Click to edit Storage Container",
+      "view_details": "Click to view Container details",
+      "add": "Click to add new Container",
+      "edit": "Click to edit Container",
       "count_free_locations": "Count of free locations",
       "search": "Click to search Storage Containers"
     },
@@ -985,12 +998,36 @@
     },
 
     "filter": {
-      "title": "Filters",
-      "name": "Type the Name"
+      "title": "Filters"
     },
 
     "menu_options": {
       "delete": "Delete"
+    }
+  },
+
+  "container_type": {
+    "list": "Container Types",
+    "create_container": "Create Container",
+    "create_container_type": "Create Container Type",
+    "name_format": "Name Format",
+    "can_hold": "Can Hold",
+
+
+    "tooltip": {
+      "add": "Click to add new Container Type",
+      "edit": "Click to edit Container Type",
+      "container_list": "Click to view Containers",
+      "search": "Click to search Container Types",
+      "delete": "Click to delete Container Type"
+    },
+
+    "menu": {
+      "overview": "Overview"
+    },
+
+    "filter": {
+      "title": "Filters"
     }
   },
 
@@ -1313,7 +1350,8 @@
     "specimen_list": "Specimen Cart",
     "consent_response": "Consent Response",
     "consent": "Consent",
-    "container": "Container"
+    "container": "Container",
+    "container_type": "Container Type"
   },
 
   "bulk_imports": {
@@ -1346,12 +1384,14 @@
       "storageContainer": "Storage Containers",
       "cpr": "Collection Protocol Registrations",
       "participant": "Participants",
+      "consent": "Consents",
       "visit": "Visits",
       "specimen": "Specimens",
       "specimenAliquot": "Specimen Aliquots",
       "specimenDerivative": "Derived Specimens",
       "masterSpecimen": "Master Specimens",
-      "shipment": "Shipment"
+      "shipment": "Shipment",
+      "distributionOrder": "Distribution Order"
     },
 
     "import_types": {
@@ -1366,7 +1406,8 @@
     "new_list": "New Specimen Cart",
     "create_list": "Create Specimen Cart",
     "update_list": "Update Specimen Cart",
-    "create_new_list": "Create New Specimen Cart",
+    "create_new_list": "Create New",
+    "manage_lists": "Manage Carts",
     "search_list": "Search Specimen Cart",
     "default_list": "My Default Cart",
     "user_default_list": "{{firstName}} {{lastName}}'s Default Cart",
@@ -1403,6 +1444,7 @@
     "no_specimens_for_distribution": "Please select at least one specimen to create distribution order",
     "no_specimens_for_shipment": "Please select at least one specimen to create shipment",
     "created_by": "Created By",
+    "checkout": "Checkout",
     "add_event": "Add Event",
     "location": "Storage Location",
     "no_specimens_to_add_event": "Please select at least one specimen to add event"
@@ -1413,6 +1455,7 @@
     "title": "Distribution Order",
     "create_order": "Create Distribution Order",
     "name": "Name",
+    "request": "Request",
     "requestor": "Requestor",
     "site": "Site",
     "dp": "Distribution Protocol",
@@ -1437,6 +1480,8 @@
     "report_gen_initiated": "Generating distribution order report...",
     "downloading_report": "Downloading distribution order report...",
     "report_will_be_emailed": "Generating distribution order report is taking more time than anticipated. Link to download report will be sent to you by email",
+    "bulk_import": "Bulk Import Distribution Orders",
+    "bulk_import_jobs": "Import Distribution Orders Job List",
 
     "filters": "Filters",
 
@@ -1445,6 +1490,7 @@
     "paste_return_specimen_labels": "Paste or scan labels of specimens to be returned",
     "specimens_returned": "{{count}} specimens returned successfully",
     "return_qty": "Return Quantity",
+    "freeze_thaw_on_return": "Freeze/Thaw",
     "user": "User",
     "comments": "Comments",
    
@@ -1491,6 +1537,7 @@
     "list": "Shipments",
     "create_shipment": "Create Shipment",
     "name": "Name",
+    "request": "Request",
     "courier_name": "Courier Name",
     "tracking_number": "Tracking Number",
     "tracking_url": "Tracking URL",

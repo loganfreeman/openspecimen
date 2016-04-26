@@ -4,7 +4,6 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,12 +20,14 @@ import com.krishagni.catissueplus.core.administrative.domain.DistributionOrder;
 import com.krishagni.catissueplus.core.administrative.domain.DistributionOrder.Status;
 import com.krishagni.catissueplus.core.administrative.domain.DistributionOrderItem;
 import com.krishagni.catissueplus.core.administrative.domain.DistributionProtocol;
+import com.krishagni.catissueplus.core.administrative.domain.SpecimenRequest;
 import com.krishagni.catissueplus.core.administrative.domain.StorageContainer;
 import com.krishagni.catissueplus.core.administrative.domain.StorageContainerPosition;
 import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.administrative.domain.factory.DistributionOrderErrorCode;
 import com.krishagni.catissueplus.core.administrative.domain.factory.DistributionOrderFactory;
 import com.krishagni.catissueplus.core.administrative.domain.factory.DistributionProtocolErrorCode;
+import com.krishagni.catissueplus.core.administrative.domain.factory.SpecimenRequestErrorCode;
 import com.krishagni.catissueplus.core.administrative.domain.factory.StorageContainerErrorCode;
 import com.krishagni.catissueplus.core.administrative.domain.factory.UserErrorCode;
 import com.krishagni.catissueplus.core.administrative.events.DistributionOrderDetail;
@@ -55,9 +56,10 @@ import com.krishagni.catissueplus.core.common.events.UserSummary;
 import com.krishagni.catissueplus.core.common.service.EmailService;
 import com.krishagni.catissueplus.core.common.service.ObjectStateParamsResolver;
 import com.krishagni.catissueplus.core.common.util.AuthUtil;
-import com.krishagni.catissueplus.core.common.util.NumUtil;
 import com.krishagni.catissueplus.core.common.util.MessageUtil;
+import com.krishagni.catissueplus.core.common.util.NumUtil;
 import com.krishagni.catissueplus.core.common.util.Utility;
+import com.krishagni.catissueplus.core.de.domain.DeObject;
 import com.krishagni.catissueplus.core.de.domain.Filter;
 import com.krishagni.catissueplus.core.de.domain.Filter.Op;
 import com.krishagni.catissueplus.core.de.domain.SavedQuery;
@@ -150,6 +152,11 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 			getValidSpecimens(order.getDistributionProtocol(), specimenLabels, ose);
 			
 			ose.checkAndThrow();
+
+			SpecimenRequest request = order.getRequest();
+			if (request != null && request.isClosed()) {
+				throw OpenSpecimenException.userError(SpecimenRequestErrorCode.CLOSED, request.getId());
+			}
 			
 			Status inputStatus = Status.valueOf(input.getStatus());
 			if (inputStatus == Status.EXECUTED) {
@@ -174,11 +181,7 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 	public ResponseEvent<DistributionOrderDetail> updateOrder(RequestEvent<DistributionOrderDetail> req) {
 		try {
 			DistributionOrderDetail input = req.getPayload();
-			Long orderId = input.getId();
-			DistributionOrder existingOrder = daoFactory.getDistributionOrderDao().getById(orderId);
-			if (existingOrder == null) {
-				return ResponseEvent.userError(DistributionOrderErrorCode.NOT_FOUND);
-			}			
+			DistributionOrder existingOrder = getOrder(input.getId(), input.getName());
 			
 			AccessCtrlMgr.getInstance().ensureUpdateDistributionOrderRights(existingOrder);
 			DistributionOrder newOrder = distributionFactory.createDistributionOrder(input, null);
@@ -258,7 +261,7 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 	public ResponseEvent<List<DistributionOrderItemDetail>> getDistributedSpecimens(RequestEvent<List<String>> req) {
 		try {
 			List<Specimen> specimens = getReadAccessSpecimens(req.getPayload());
-			if (specimens == null) {
+			if (CollectionUtils.isEmpty(specimens)) {
 				throw OpenSpecimenException.userError(RbacErrorCode.ACCESS_DENIED);
 			}
 
@@ -384,13 +387,31 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 			public void headers(OutputStream out) {
 				@SuppressWarnings("serial")
 				Map<String, String> headers = new LinkedHashMap<String, String>() {{
-					put(getMessage("dist_order_name"),     order.getName());
-					put(getMessage("dist_dp_title"),       order.getDistributionProtocol().getTitle());
-					put(getMessage("dist_requestor_name"), order.getRequester().formattedName());
-					put(getMessage("dist_requested_date"), Utility.getDateString(order.getExecutionDate()));
-					put(getMessage("dist_receiving_site"), order.getSite().getName());
-					put(getMessage("dist_exported_by"),    AuthUtil.getCurrentUser().formattedName());
-					put(getMessage("dist_exported_on"),    Utility.getDateString(Calendar.getInstance().getTime()));
+					String notSpecified = msg("common_not_specified");
+					DistributionProtocol dp = order.getDistributionProtocol();
+
+					put(msg("dist_order_name"),     order.getName());
+					put(msg("dist_dp_title"),       dp.getTitle());
+					put(msg("dist_dp_short_title"), dp.getShortTitle());
+					put(msg("dist_requestor_name"), order.getRequester().formattedName());
+					put(msg("dist_requested_date"), Utility.getDateString(order.getExecutionDate()));
+					put(msg("dist_receiving_site"), order.getSite() == null ? notSpecified : order.getSite().getName());
+					put(msg("dist_tracking_url"),   StringUtils.isBlank(order.getTrackingUrl()) ? notSpecified : order.getTrackingUrl());
+					put(msg("dist_comments"),       StringUtils.isBlank(order.getComments()) ? notSpecified : order.getComments());
+					put(msg("dp_irb_id"),           StringUtils.isBlank(dp.getIrbId()) ? notSpecified : dp.getIrbId());
+					put(msg("dist_exported_by"),    AuthUtil.getCurrentUser().formattedName());
+					put(msg("dist_exported_on"),    Utility.getDateString(Calendar.getInstance().getTime()));
+
+					User pi = dp.getPrincipalInvestigator();
+					put(msg("dist_dp_pi_inst_depart"), pi.getInstitute().getName() + " / " + pi.getDepartment().getName());
+					put(msg("dist_dp_pi_email_addr"),  pi.getEmailAddress());
+					put(msg("dist_dp_pi_cont_num"),    StringUtils.isBlank(pi.getPhoneNumber()) ? notSpecified : pi.getPhoneNumber());
+					put(msg("dist_dp_pi_addr"),        StringUtils.isBlank(pi.getAddress()) ? notSpecified : pi.getAddress());
+
+					DeObject extension = order.getDistributionProtocol().getExtension();
+					if (extension != null) {
+						putAll(extension.getLabelValueMap());
+					}
 
 					put("", ""); // blank line
 				}};
@@ -400,7 +421,7 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 		});
 	}
 	
-	private String getMessage(String code) {
+	private String msg(String code) {
 		return MessageUtil.getInstance().getMessage(code);
 	}
 	
@@ -483,6 +504,7 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 		setItemReturnDate(item, detail.getTime());
 		setItemReturnedBy(item, detail.getUser());
 		setItemReturningPosition(item, detail.getLocation(), containersMap);
+		setItemFreezeThawIncrOnReturn(item, detail.getIncrFreezeThaw());
 		item.setReturnComments(detail.getComments());
 		item.returnSpecimen();
 	}
@@ -569,6 +591,11 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 		item.setReturningContainer(container);
 		item.setReturningRow(position.getPosTwo());
 		item.setReturningColumn(position.getPosOne());
+	}
+
+	private void setItemFreezeThawIncrOnReturn(DistributionOrderItem item, Integer incrFreezeThaw) {
+		item.getSpecimen().incrementFreezeThaw(incrFreezeThaw);
+		item.setFreezeThawIncrOnReturn(incrFreezeThaw);
 	}
 
 	private void setItemReturnedBy(DistributionOrderItem item, UserSummary userDetail) {

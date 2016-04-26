@@ -27,6 +27,7 @@ import com.krishagni.catissueplus.core.common.events.DependentEntityDetail;
 import com.krishagni.catissueplus.core.common.events.RequestEvent;
 import com.krishagni.catissueplus.core.common.events.ResponseEvent;
 import com.krishagni.catissueplus.core.common.util.Utility;
+import com.krishagni.catissueplus.core.de.events.FormCtxtSummary;
 
 @Controller
 @RequestMapping("/distribution-protocols")
@@ -49,6 +50,9 @@ public class DistributionProtocolController {
 			
 			@RequestParam(value = "piId", required = false)
 			Long piId,
+
+			@RequestParam(value = "receivingInstitute", required = false)
+			String receivingInstitute,
 			
 			@RequestParam(value = "startAt", required = false, defaultValue = "0") 
 			int startAt,
@@ -68,6 +72,7 @@ public class DistributionProtocolController {
 			.query(searchStr)
 			.title(title)
 			.piId(piId)
+			.receivingInstitute(receivingInstitute)
 			.includeStat(includeStats)
 			.activityStatus(activityStatus);
 		
@@ -182,6 +187,15 @@ public class DistributionProtocolController {
 		ResponseEvent<File> resp = dpSvc.exportOrderStats(getRequest(crit));
 		resp.throwErrorIfUnsuccessful();
 		Utility.sendToClient(response, "dp-order-stat.csv", resp.getPayload(), true);
+	}
+
+	@RequestMapping(method = RequestMethod.GET, value = "/extension-form")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public FormCtxtSummary getForm() {
+		ResponseEvent<FormCtxtSummary> resp = dpSvc.getExtensionForm();
+		resp.throwErrorIfUnsuccessful();
+		return resp.getPayload();
 	}
 	
 	private <T> RequestEvent<T> getRequest(T payload) {

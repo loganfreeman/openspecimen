@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -15,6 +16,8 @@ import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 
 import com.krishagni.catissueplus.core.administrative.domain.factory.StorageContainerErrorCode;
+import com.krishagni.catissueplus.core.administrative.repository.ContainerRestrictionsCriteria;
+import com.krishagni.catissueplus.core.administrative.repository.StorageContainerDao;
 import com.krishagni.catissueplus.core.biospecimen.domain.BaseEntity;
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol;
 import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
@@ -44,6 +47,8 @@ public class StorageContainer extends BaseEntity {
 
 	private String barcode;
 
+	private ContainerType type;
+	
 	private Double temperature;
 	
 	private int noOfColumns;
@@ -64,7 +69,7 @@ public class StorageContainer extends BaseEntity {
 	
 	private String comments;
 	
-	private Set<StorageContainer> childContainers = new HashSet<StorageContainer>();
+	private Set<StorageContainer> childContainers = new LinkedHashSet<StorageContainer>();
 	
 	private Set<StorageContainer> ancestorContainers = new HashSet<StorageContainer>();
 	
@@ -98,7 +103,6 @@ public class StorageContainer extends BaseEntity {
 
 	private transient StorageContainerPosition lastAssignedPos;
 
-
 	public StorageContainer() {
 		ancestorContainers.add(this);
 	}
@@ -121,6 +125,14 @@ public class StorageContainer extends BaseEntity {
 
 	public void setBarcode(String barcode) {
 		this.barcode = barcode;
+	}
+
+	public ContainerType getType() {
+		return type;
+	}
+
+	public void setType(ContainerType type) {
+		this.type = type;
 	}
 
 	public Double getTemperature() {
@@ -246,6 +258,11 @@ public class StorageContainer extends BaseEntity {
 	public void setChildContainers(Set<StorageContainer> childContainers) {
 		this.childContainers = childContainers;
 	}
+	
+	public void addChildContainer(StorageContainer container) {
+		container.setParentContainer(this);
+		childContainers.add(container);
+	}
 
 	@NotAudited
 	public Set<StorageContainer> getAncestorContainers() {
@@ -360,6 +377,7 @@ public class StorageContainer extends BaseEntity {
 		
 		setName(other.name);
 		setBarcode(other.barcode);
+		setType(other.type);
 		setTemperature(other.temperature);
 		updateCapacity(other.noOfColumns, other.noOfRows);
 		updateLabelingScheme(other.columnLabelingScheme, other.rowLabelingScheme);
@@ -568,22 +586,35 @@ public class StorageContainer extends BaseEntity {
 	
 	
 	public void validateRestrictions() {
-		StorageContainer parent = getParentContainer();		
+		StorageContainer parent = getParentContainer();
 		if (parent != null && !parent.canContain(this)) {
 			throw OpenSpecimenException.userError(StorageContainerErrorCode.CANNOT_HOLD_CONTAINER, parent.getName(), getName());
 		}
-		
-		for (StorageContainerPosition pos : getOccupiedPositions()) {
-			if (pos.getOccupyingContainer() != null) {
-				pos.getOccupyingContainer().validateRestrictions();
-			} else if (pos.getOccupyingSpecimen() != null) {
-				if (!canContain(pos.getOccupyingSpecimen())) {
-					throw OpenSpecimenException.userError(
-							StorageContainerErrorCode.CANNOT_HOLD_SPECIMEN, 
-							getName(), 
-							pos.getOccupyingSpecimen().getLabelOrDesc());
-				}
-			}
+
+		ContainerRestrictionsCriteria crit = new ContainerRestrictionsCriteria()
+			.containerId(getId())
+			.specimenClasses(getCompAllowedSpecimenClasses())
+			.specimenTypes(getCompAllowedSpecimenTypes())
+			.collectionProtocols(getCompAllowedCps())
+			.site(getSite());
+
+		StorageContainerDao containerDao = getDaoFactory().getStorageContainerDao();
+		List<String> nonCompliantContainers = containerDao.getNonCompliantContainers(crit);
+		if (CollectionUtils.isNotEmpty(nonCompliantContainers)) {
+			// Show first non compliant container in error message
+			throw OpenSpecimenException.userError(
+				StorageContainerErrorCode.CANNOT_HOLD_CONTAINER,
+				getName(),
+				nonCompliantContainers.get(0));
+		}
+
+		List<String> nonCompliantSpecimens = containerDao.getNonCompliantSpecimens(crit);
+		if (CollectionUtils.isNotEmpty(nonCompliantSpecimens)) {
+			// Show first non compliant specimen in error message
+			throw OpenSpecimenException.userError(
+				StorageContainerErrorCode.CANNOT_HOLD_SPECIMEN,
+				getName(),
+				nonCompliantSpecimens.get(0));
 		}
 	}
 	
@@ -621,12 +652,12 @@ public class StorageContainer extends BaseEntity {
 
 	public List<DependentEntityDetail> getDependentEntities() {
 		return DependentEntityDetail.singletonList(
-				Specimen.getEntityName(), getSpecimenCount());
+				Specimen.getEntityName(), getSpecimensCount());
 	}
 	
 	public void delete() {
-		int specimenCnt = getSpecimenCount();
-		if (specimenCnt > 0) {
+		int specimensCnt = getSpecimensCount();
+		if (specimensCnt > 0) {
 			throw OpenSpecimenException.userError(StorageContainerErrorCode.REF_ENTITY_FOUND);
 		}
 		
@@ -696,6 +727,28 @@ public class StorageContainer extends BaseEntity {
 		}
 	}
 	
+	public StorageContainer copy() {
+		StorageContainer copy = new StorageContainer();
+		copy.setType(getType());
+		copy.setSite(getSite());
+		copy.setParentContainer(getParentContainer());
+		copy.setNoOfColumns(getNoOfColumns());
+		copy.setNoOfRows(getNoOfRows());
+		copy.setColumnLabelingScheme(getColumnLabelingScheme());
+		copy.setRowLabelingScheme(getRowLabelingScheme());
+		copy.setTemperature(getTemperature());
+		copy.setStoreSpecimenEnabled(isStoreSpecimenEnabled());
+		copy.setComments(getComments());
+		copy.setCreatedBy(getCreatedBy());
+		copy.setAllowedSpecimenClasses(new HashSet<String>(getAllowedSpecimenClasses()));		
+		copy.setAllowedSpecimenTypes(new HashSet<String>(getAllowedSpecimenTypes()));
+		copy.setAllowedCps(new HashSet<CollectionProtocol>(getAllowedCps()));
+		copy.setCompAllowedSpecimenClasses(computeAllowedSpecimenClasses());
+		copy.setCompAllowedSpecimenTypes(computeAllowedSpecimenTypes());
+		copy.setCompAllowedCps(computeAllowedCps());
+		return copy;
+	}
+	
 	private void deleteWithoutCheck() {
 		for (StorageContainer child: getChildContainers()) {
 			child.deleteWithoutCheck();
@@ -712,18 +765,9 @@ public class StorageContainer extends BaseEntity {
 			setPosition(null);
 		}
 	}
-	
-	private int getSpecimenCount() {
-		int specimenCnt = 0;
-		for (StorageContainer descendant: descendentContainers) {
-			specimenCnt += descendant.getSelfSpecimenCount();
-		}
-		
-		return specimenCnt;
-	}
-	
-	private int getSelfSpecimenCount() {
-		return getOccupiedPositions().size() - getChildContainers().size();
+
+	private int getSpecimensCount() {
+		return getDaoFactory().getStorageContainerDao().getSpecimensCount(getId());
 	}
 	
 	private Set<String> computeAllAllowedSpecimenTypes() {

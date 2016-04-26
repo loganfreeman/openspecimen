@@ -35,12 +35,11 @@ import com.krishagni.catissueplus.core.audit.events.AuditDetail;
 import com.krishagni.catissueplus.core.audit.events.RequestAudit;
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol;
 import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
+import com.krishagni.catissueplus.core.biospecimen.events.MergeCpDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolDetail;
-import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolEventDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolSummary;
 import com.krishagni.catissueplus.core.biospecimen.events.ConsentTierDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.ConsentTierOp;
-import com.krishagni.catissueplus.core.biospecimen.events.CopyCpeOpDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.ConsentTierOp.OP;
 import com.krishagni.catissueplus.core.biospecimen.events.CopyCpOpDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CpQueryCriteria;
@@ -462,6 +461,17 @@ public class CollectionProtocolsController {
 		
 		ResponseEvent<AuditDetail> resp = auditSvc.getAuditDetail(getRequest(req));
 		resp.throwErrorIfUnsuccessful();
+	
+		return resp.getPayload();
+	}
+
+	@RequestMapping(method = RequestMethod.POST, value="/merge")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public MergeCpDetail mergeCollectionProtocol(@RequestBody MergeCpDetail mergeDetail) {
+		ResponseEvent<MergeCpDetail> resp = cpSvc.mergeCollectionProtocols(getRequest(mergeDetail));
+		resp.throwErrorIfUnsuccessful();
+
 		return resp.getPayload();
 	}
 	

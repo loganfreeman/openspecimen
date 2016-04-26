@@ -24,15 +24,17 @@ edu.common.de.RequiredValidator = function(field, dataEl) {
       if (dataEl.prop('type') == 'checkbox') {
         valid = dataEl.prop('checked');
       } else {
-        valid = dataEl.val() && dataEl.val().length != 0;
+        valid = field.getValue() &&
+                (field.getValue().value || field.getValue().value == 0) &&
+                field.getValue().value.length != 0;
       }
       el = field.inputEl;
     }
 
     if (!valid) {
-      edu.common.de.Utility.highlightError(el, field.getCaption() + ' is required field');
+      edu.common.de.Utility.highlightError(el, 'Please fill this field');
     } else {
-      edu.common.de.Utility.unHighlightError(el, field.getTooltip());
+      edu.common.de.Utility.unHighlightError(el);
     }
 
     return valid;
@@ -48,13 +50,13 @@ edu.common.de.RangeValidator = function(field, dataEl, params) {
 
     var number = Number(val);
     if ($.isNumeric(params.min) && number < Number(params.min)) {
-      edu.common.de.Utility.highlightError(field.inputEl, field.getCaption() + " cannot be less than " + params.min);
+      edu.common.de.Utility.highlightError(field.inputEl, "This field value is too less");
       return false;
     } else if ($.isNumeric(params.max) && number > Number(params.max)) {
-      edu.common.de.Utility.highlightError(field.inputEl, field.getCaption() + " cannot be more than " + params.max);
+      edu.common.de.Utility.highlightError(field.inputEl, "This field value is too more");
       return false;
     } else {
-      edu.common.de.Utility.unHighlightError(field.inputEl, field.getTooltip());
+      edu.common.de.Utility.unHighlightError(field.inputEl);
       return true;
     }
   };
@@ -68,7 +70,7 @@ edu.common.de.NumericValidator = function(field, dataEl, params) {
     }
 
     if (!$.isNumeric(val)) {
-      edu.common.de.Utility.highlightError(field.inputEl, field.getCaption() + " must be a numeric");
+      edu.common.de.Utility.highlightError(field.inputEl, "This field value is not valid");
       return false;
     }
 
@@ -84,7 +86,7 @@ edu.common.de.NumericValidator = function(field, dataEl, params) {
       }
     } 
 
-    edu.common.de.Utility.unHighlightError(field.inputEl, field.getTooltip());
+    edu.common.de.Utility.unHighlightError(field.inputEl);
     return true;
   };
 };
@@ -124,8 +126,8 @@ edu.common.de.FieldValidator = function(rules, field, dataEl) {
     }
 
     return valid;
-  } 
-
+  }
+ 
   if (dataEl instanceof Array) {
     for (var i = 0; i < dataEl.length; ++i) {
       dataEl[i].change(this.validate);
@@ -133,7 +135,11 @@ edu.common.de.FieldValidator = function(rules, field, dataEl) {
     field.clusterEl.focusout(this.validate);
   } else {
     dataEl.change(this.validate);
-    dataEl.focusout(this.validate);
+    if (field.selectField) {
+      dataEl.on('select2-blur', this.validate);
+    } else {
+      dataEl.focusout(this.validate);
+    }
   }
 };
 
@@ -1165,6 +1171,8 @@ edu.common.de.SelectFieldOptions = function(field, args) {
 // TODO: Need to merge both implementations to avoid code duplication
 //
 edu.common.de.SelectField = function(id, field, args) {
+  this.selectField = true;
+
   this.inputEl = null;
 
   this.control = null;
@@ -1447,18 +1455,18 @@ edu.common.de.SubFormField = function(id, sfField, args) {
     return fields;
   };
 
-  this.getWidthClass = function(numFields) {
-    var width = Math.floor(95 / numFields);
+  this.getFieldWidth = function(numFields) {
+    var width = Math.floor(95 / numFields) - 1;
     if (width < 20) {
       width = 20;
     }
 
-    return width + "%";
+    return width;
   };
 
   this.fields = this.getFields();
 
-  this.widthCls = this.getWidthClass(this.getFields().length);
+  this.fieldWidth = this.getFieldWidth(this.getFields().length);
 
   this.render = function() {
     this.sfFieldsEl = $("<div/>");
@@ -1527,23 +1535,30 @@ edu.common.de.SubFormField = function(id, sfField, args) {
     return sfField.name;
   };
 
-  var getSfFieldWidth = function(field) { 
-    if (field.type != 'datePicker') {
-      return 20 + "%";
+  var getSfFieldMinWidth = function(field) {
+    if (field.type == 'datePicker') {
+      if (field.format && field.format.indexOf('HH:mm') != -1) {
+        //
+        // Minimum container width required to display both date and time picker
+        //
+        return '250px';
+      } else {
+        //
+        // Minimum container width required to display only date picker
+        //
+        return '150px';
+      }
+    } else {
+      return undefined;
     }
-
-    if (field.format && field.format.indexOf("HH:mm") != -1) {
-      return 25 + "%";
-    }
-
-    return 20 + "%";
   };
-    
+
   this.getHeading = function() {
     var heading = $("<div/>").addClass("form-group clearfix").css("white-space", "nowrap");
     for (var i = 0; i < this.fields.length; ++i) {
       var field = this.fields[i];
-      var column = $("<div/>").css("width", getSfFieldWidth(field))
+      var column = $("<div/>").css("width", this.fieldWidth + '%')
+        .css("min-width", getSfFieldMinWidth(field))
         .addClass("de-sf-cell")
         .append(field.caption);
       heading.append(column);
@@ -1586,7 +1601,7 @@ edu.common.de.SubFormField = function(id, sfField, args) {
       fieldObj.$attrs = field;
 
       var fieldEl = fieldObj.render();
-      rowDiv.append(this.cell(fieldEl, getSfFieldWidth(field)));
+      rowDiv.append(this.cell(fieldEl, this.fieldWidth, getSfFieldMinWidth(field)));
       fieldObjs.push(fieldObj);
     }
 
@@ -1607,12 +1622,15 @@ edu.common.de.SubFormField = function(id, sfField, args) {
     this.rowIdx++;
   };
 
-  this.cell = function(el, width) {
+  this.cell = function(el, width, minWidth) {
     if (!width) {
-      width = this.widthCls;
+      width = this.fieldWidth;
     }
 
-    return $("<div/>").css("width", width).addClass("de-sf-cell").append(el);
+    return $("<div/>").css("width", width + '%')
+      .css("min-width", minWidth)
+      .addClass("de-sf-cell")
+      .append(el);
   };
   
   this.validate = function() {
@@ -1928,20 +1946,17 @@ edu.common.de.Utility = {
              .append($("<span/>").addClass("glyphicon glyphicon-" + options.icon));
   },
 
-  highlightError: function(el, tooltip) {
-    if (el.is('select')) {
-      el.siblings('div.select2-container').attr('title', tooltip);
+  highlightError: function(el, errorMessage) {
+    var errEl = el.next(".alert-danger");
+    if (!errEl.length) {
+      el.after($("<div/>").addClass("alert alert-danger de-form-err-msg").append(errorMessage));
     }
-    el.addClass('de-input-error').attr('title', tooltip);
   },
 
-  unHighlightError: function(el, tooltip) {
-    if (el.is('select')) {
-      el.siblings('div.select2-container').attr('title', tooltip);
-    }
-    el.removeClass('de-input-error').attr('title', tooltip);
+  unHighlightError: function(el) {
+    el.next('.alert-danger').remove();
   },
-  
+
   getValueByDataType: function(field, value) {
     if (value == undefined || field.dataType == "STRING" || field.dataType == "BOOLEAN") {
       return value;
@@ -1996,6 +2011,8 @@ edu.common.de.Extend = function(props) {
 };
 
 edu.common.de.LookupField = function(params, callback) {
+  this.selectField = true;
+
   this.inputEl = null;
 
   this.control = null;

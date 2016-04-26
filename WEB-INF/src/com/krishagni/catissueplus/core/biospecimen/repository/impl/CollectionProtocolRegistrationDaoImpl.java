@@ -27,6 +27,7 @@ import com.krishagni.catissueplus.core.biospecimen.events.ParticipantSummary;
 import com.krishagni.catissueplus.core.biospecimen.repository.CollectionProtocolRegistrationDao;
 import com.krishagni.catissueplus.core.biospecimen.repository.CprListCriteria;
 import com.krishagni.catissueplus.core.common.repository.AbstractDao;
+import com.krishagni.catissueplus.core.common.util.Utility;
 
 public class CollectionProtocolRegistrationDaoImpl 
 	extends AbstractDao<CollectionProtocolRegistration> 
@@ -52,7 +53,7 @@ public class CollectionProtocolRegistrationDaoImpl
 		List<CprSummary> cprs = new ArrayList<CprSummary>();
 		Map<Long, CprSummary> cprMap = new HashMap<Long, CprSummary>();
 		
-		List<Object[]> rows = query.list();				
+		List<Object[]> rows = query.list();
 		for (Object[] row : rows) {
 			CprSummary cpr = getCprSummary(row);
 			if (cprCrit.includeStat()) {
@@ -74,6 +75,17 @@ public class CollectionProtocolRegistrationDaoImpl
 		}
 		
 		return cprs;
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public List<CollectionProtocolRegistration> getCprsByCpId(Long cpId, int startAt, int maxResults) {
+		return sessionFactory.getCurrentSession()
+			.getNamedQuery(GET_BY_CP_ID)
+			.setLong("cpId", cpId)
+			.setFirstResult(startAt < 0 ? 0 : startAt)
+			.setMaxResults(maxResults < 0 ? 100 : maxResults)
+			.list();
 	}
 
 	@Override
@@ -119,13 +131,22 @@ public class CollectionProtocolRegistrationDaoImpl
 				.setString("shortTitle", cpShortTitle)
 				.setString("ppid", ppid)
 				.list();
-		
-		return CollectionUtils.isEmpty(result) ? null : result.iterator().next();		
+		return CollectionUtils.isEmpty(result) ? null : result.iterator().next();
 	}
-	
+
+	@Override
+	public CollectionProtocolRegistration getCprByCpShortTitleAndEmpi(String cpShortTitle, String empi) {
+		List<CollectionProtocolRegistration> result = getCurrentSession()
+				.getNamedQuery(GET_BY_CP_SHORT_TITLE_AND_EMPI)
+				.setString("shortTitle", cpShortTitle)
+				.setString("empi", empi)
+				.list();
+		return CollectionUtils.isEmpty(result) ? null : result.iterator().next();
+	}
+
 	@Override
 	@SuppressWarnings("unchecked")
-	public CollectionProtocolRegistration getCprByParticipantId(Long cpId, Long participantId) {		
+	public CollectionProtocolRegistration getCprByParticipantId(Long cpId, Long participantId) {
 		List<CollectionProtocolRegistration> result =  sessionFactory.getCurrentSession()
 				.getNamedQuery(GET_BY_CP_ID_AND_PID)
 				.setLong("cpId", cpId)
@@ -190,8 +211,10 @@ public class CollectionProtocolRegistrationDaoImpl
 		if (crit.registrationDate() == null) {
 			return;
 		}
-		
-		query.add(Restrictions.eq("registrationDate", crit.registrationDate()));
+
+		Date from = Utility.chopTime(crit.registrationDate());
+		Date to = Utility.getEndOfDay(crit.registrationDate());
+		query.add(Restrictions.between("registrationDate", from, to));
 	}
 	
 	private void addMrnSiteAndEmpiAndSsnCondition(Criteria query, CprListCriteria crit) {
@@ -262,8 +285,10 @@ public class CollectionProtocolRegistrationDaoImpl
 		if (crit.dob() == null) {
 			return;
 		}
-		
-		query.add(Restrictions.eq("participant.birthDate", crit.dob()));
+
+		Date from = Utility.chopTime(crit.dob());
+		Date to = Utility.getEndOfDay(crit.dob());
+		query.add(Restrictions.between("participant.birthDate", from, to));
 	}
 	
 	private void addSpecimenCondition(Criteria query, CprListCriteria crit) {
@@ -277,7 +302,7 @@ public class CollectionProtocolRegistrationDaoImpl
 					.add(Restrictions.ilike("specimen.label", crit.specimen(), MatchMode.ANYWHERE))
 					.add(Restrictions.ilike("specimen.barcode", crit.specimen(), MatchMode.ANYWHERE)))
 			.add(Restrictions.ne("specimen.activityStatus", "Disabled"))
-			.add(Restrictions.ne("visit.activityStatus", "Disabled"));		
+			.add(Restrictions.ne("visit.activityStatus", "Disabled"));
 	}
 
 	private ProjectionList getCprSummaryFields(CprListCriteria cprCrit) {
@@ -308,7 +333,7 @@ public class CollectionProtocolRegistrationDaoImpl
 		cpr.setCpShortTitle((String)row[idx++]);
 
 		ParticipantSummary participant = new ParticipantSummary();
-		cpr.setParticipant(participant);			
+		cpr.setParticipant(participant);
 		participant.setId((Long)row[idx++]);
 		if (row.length > idx) {
 			participant.setFirstName((String)row[idx++]);
@@ -346,6 +371,10 @@ public class CollectionProtocolRegistrationDaoImpl
 	private static final String GET_BY_CP_TITLE_AND_PPID = FQN + ".getCprByCpTitleAndPpid";
 	
 	private static final String GET_BY_CP_SHORT_TITLE_AND_PPID = FQN + ".getCprByCpShortTitleAndPpid";
+
+	private static final String GET_BY_CP_SHORT_TITLE_AND_EMPI = FQN + ".getCprByCpShortTitleAndEmpi";
 	
 	private static final String GET_BY_CP_ID_AND_PID = FQN + ".getCprByCpIdAndPid";
+
+	private static final String GET_BY_CP_ID = FQN + ".getCprsByCpId";
 }

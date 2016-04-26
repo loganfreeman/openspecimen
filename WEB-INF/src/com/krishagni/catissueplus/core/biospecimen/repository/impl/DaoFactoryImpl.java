@@ -11,7 +11,9 @@ import com.krishagni.catissueplus.core.administrative.repository.PermissibleValu
 import com.krishagni.catissueplus.core.administrative.repository.ScheduledJobDao;
 import com.krishagni.catissueplus.core.administrative.repository.ShipmentDao;
 import com.krishagni.catissueplus.core.administrative.repository.SiteDao;
+import com.krishagni.catissueplus.core.administrative.repository.SpecimenRequestDao;
 import com.krishagni.catissueplus.core.administrative.repository.StorageContainerDao;
+import com.krishagni.catissueplus.core.administrative.repository.ContainerTypeDao;
 import com.krishagni.catissueplus.core.administrative.repository.UserDao;
 import com.krishagni.catissueplus.core.administrative.repository.impl.DistributionOrderDaoImpl;
 import com.krishagni.catissueplus.core.administrative.repository.impl.DistributionProtocolDaoImpl;
@@ -21,7 +23,9 @@ import com.krishagni.catissueplus.core.administrative.repository.impl.Permissibl
 import com.krishagni.catissueplus.core.administrative.repository.impl.ScheduledJobDaoImpl;
 import com.krishagni.catissueplus.core.administrative.repository.impl.ShipmentDaoImpl;
 import com.krishagni.catissueplus.core.administrative.repository.impl.SiteDaoImpl;
+import com.krishagni.catissueplus.core.administrative.repository.impl.SpecimenRequestDaoImpl;
 import com.krishagni.catissueplus.core.administrative.repository.impl.StorageContainerDaoImpl;
+import com.krishagni.catissueplus.core.administrative.repository.impl.ContainerTypeDaoImpl;
 import com.krishagni.catissueplus.core.administrative.repository.impl.UserDaoImpl;
 import com.krishagni.catissueplus.core.audit.dao.AuditDao;
 import com.krishagni.catissueplus.core.audit.dao.impl.AuditDaoImpl;
@@ -146,6 +150,13 @@ public class DaoFactoryImpl implements DaoFactory {
 		setSessionFactory(dao);
 		return dao;
 	}
+	
+	@Override
+	public ContainerTypeDao getContainerTypeDao() {
+		ContainerTypeDaoImpl dao = new ContainerTypeDaoImpl();
+		setSessionFactory(dao);
+		return dao;
+	}
 
 	@Override
 	public DistributionProtocolDao getDistributionProtocolDao() {
@@ -227,6 +238,13 @@ public class DaoFactoryImpl implements DaoFactory {
 	@Override
 	public ShipmentDao getShipmentDao() {
 		ShipmentDaoImpl dao = new ShipmentDaoImpl();
+		setSessionFactory(dao);
+		return dao;
+	}
+
+	@Override
+	public SpecimenRequestDao getSpecimenRequestDao() {
+		SpecimenRequestDaoImpl dao = new SpecimenRequestDaoImpl();
 		setSessionFactory(dao);
 		return dao;
 	}

@@ -1,20 +1,31 @@
 
 package com.krishagni.catissueplus.core.administrative.repository.impl;
 
+import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Criteria;
 import org.hibernate.Query;
+import org.hibernate.criterion.DetachedCriteria;
+import org.hibernate.criterion.Disjunction;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.Subqueries;
+import org.hibernate.sql.JoinType;
 
 import com.krishagni.catissueplus.core.administrative.domain.StorageContainer;
 import com.krishagni.catissueplus.core.administrative.domain.StorageContainerPosition;
+import com.krishagni.catissueplus.core.administrative.repository.ContainerRestrictionsCriteria;
 import com.krishagni.catissueplus.core.administrative.repository.StorageContainerDao;
 import com.krishagni.catissueplus.core.administrative.repository.StorageContainerListCriteria;
+import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolSite;
 import com.krishagni.catissueplus.core.common.repository.AbstractDao;
 import com.krishagni.catissueplus.core.common.util.Status;
 
@@ -29,6 +40,11 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 	@Override
 	public List<StorageContainer> getStorageContainers(StorageContainerListCriteria listCrit) {
 		return new ListQueryBuilder(listCrit).query().list();
+	}
+	
+	@Override
+	public int getStorageContainersCount(StorageContainerListCriteria listCrit) {
+		return ((Number) new ListQueryBuilder(listCrit, true).query().uniqueResult()).intValue();
 	}
 	
 	@Override
@@ -53,7 +69,7 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 
 		return result.isEmpty() ? null : result.iterator().next();		
 	}
-	
+
 	@Override
 	public void delete(StorageContainerPosition position) {
 		sessionFactory.getCurrentSession().delete(position);		
@@ -64,8 +80,106 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 		return getObjectIds("containerId", key, value);
 	}
 
+	@Override
+	public List<String> getNonCompliantContainers(ContainerRestrictionsCriteria crit) {
+		Criteria query = getCurrentSession().createCriteria(StorageContainer.class)
+			.createAlias("descendentContainers", "d")
+			.add(Restrictions.eq("id", crit.containerId()))
+			.setProjection(Projections.distinct(Projections.property("d.name")));
+
+		Disjunction restriction = Restrictions.disjunction();
+		if (isNotEmpty(crit.specimenClasses())) {
+			query.createAlias("d.compAllowedSpecimenClasses", "spmnClass", JoinType.LEFT_OUTER_JOIN);
+			restriction.add(
+				Restrictions.conjunction()
+					.add(Restrictions.isNotNull("spmnClass.elements"))
+					.add(Restrictions.not(Restrictions.in("spmnClass.elements", crit.specimenClasses())))
+			);
+		}
+
+		if (isNotEmpty(crit.specimenTypes())) {
+			query.createAlias("d.compAllowedSpecimenTypes", "spmnType", JoinType.LEFT_OUTER_JOIN);
+			restriction.add(
+				Restrictions.conjunction()
+					.add(Restrictions.isNotNull("spmnType.elements"))
+					.add(Restrictions.not(Restrictions.in("spmnType.elements", crit.specimenTypes())))
+			);
+		}
+
+		if (isNotEmpty(crit.collectionProtocols())) {
+			query.createAlias("d.compAllowedCps", "cp", JoinType.LEFT_OUTER_JOIN);
+			restriction.add(
+				Restrictions.conjunction()
+					.add(Restrictions.isNotNull("cp.id"))
+					.add(Restrictions.not(Restrictions.in("cp.id", crit.collectionProtocolIds())))
+			);
+		} else {
+			DetachedCriteria siteCrit = DetachedCriteria.forClass(CollectionProtocolSite.class)
+				.createAlias("collectionProtocol", "cp1")
+				.createAlias("site", "site1")
+				.add(Restrictions.eqProperty("cp1.id", "cp.id"))
+				.setProjection(Property.forName("site1.id"));
+
+			query.createAlias("d.compAllowedCps", "cp", JoinType.LEFT_OUTER_JOIN);
+			restriction.add(
+				Restrictions.conjunction()
+					.add(Restrictions.isNotNull("cp.id"))
+					.add(Subqueries.notIn(crit.siteId(), siteCrit))
+			);
+		}
+
+		return query.add(restriction).list();
+	}
+
+	@Override
+	public List<String> getNonCompliantSpecimens(ContainerRestrictionsCriteria crit) {
+		Criteria query = getCurrentSession().createCriteria(StorageContainer.class)
+			.createAlias("descendentContainers", "d")
+			.createAlias("d.occupiedPositions", "pos")
+			.createAlias("pos.occupyingSpecimen", "spmn")
+			.createAlias("spmn.visit", "visit")
+			.createAlias("visit.registration", "cpr")
+			.createAlias("cpr.collectionProtocol", "cp")
+			.add(Restrictions.eq("id", crit.containerId()))
+			.setProjection(Projections.distinct(Projections.property("spmn.label")));
+
+		Disjunction restriction = Restrictions.disjunction();
+		if (isNotEmpty(crit.specimenClasses())) {
+			restriction.add(Restrictions.not(Restrictions.in("spmn.specimenClass", crit.specimenClasses())));
+		}
+
+		if (isNotEmpty(crit.specimenTypes())) {
+			restriction.add(Restrictions.not(Restrictions.in("spmn.specimenType", crit.specimenTypes())));
+		}
+
+		if (isNotEmpty(crit.collectionProtocols())) {
+			restriction.add(Restrictions.not(Restrictions.in("cp.id", crit.collectionProtocolIds())));
+		} else {
+			DetachedCriteria siteCrit = DetachedCriteria.forClass(CollectionProtocolSite.class)
+				.createAlias("collectionProtocol", "cp1")
+				.createAlias("site", "site1")
+				.add(Restrictions.eqProperty("cp1.id", "cp.id"))
+				.setProjection(Property.forName("site1.id"));
+
+			query.createAlias("cp.sites", "cpSite").createAlias("cpSite.site", "site");
+			restriction.add(Subqueries.propertyNotIn("site.id", siteCrit));
+		}
+
+		return query.add(restriction).list();
+	}
+
+	@Override
+	public int getSpecimensCount(Long containerId) {
+		return ((Number)sessionFactory.getCurrentSession()
+			.getNamedQuery(GET_SPECIMENS_COUNT)
+			.setLong("containerId", containerId)
+			.uniqueResult()).intValue();
+	}
+
 	private class ListQueryBuilder {
 		private StorageContainerListCriteria crit;
+		
+		private StringBuilder select = new StringBuilder();
 		
 		private StringBuilder from = new StringBuilder();
 		
@@ -74,22 +188,13 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 		private Map<String, Object> params = new HashMap<String, Object>();
 		
 		public ListQueryBuilder(StorageContainerListCriteria crit) {
-			this.crit = crit;
-				
-			
-			if (crit.hierarchical()) {
-				from = new StringBuilder("select distinct c from ").append(getType().getName()).append(" c")
-						.append(" join c.descendentContainers dc");
-				where = new StringBuilder("where dc.activityStatus = :activityStatus");
-			} else {
-				from = new StringBuilder("select c from ").append(getType().getName()).append(" c");
-				where = new StringBuilder("where c.activityStatus = :activityStatus");						
-			}
-
-			from.append(" left join fetch c.position pos ");
-			params.put("activityStatus", Status.ACTIVITY_STATUS_ACTIVE.getStatus());
+			prepareQuery(crit, false);
 		}
 		
+		public ListQueryBuilder(StorageContainerListCriteria crit, boolean countReq) {
+			prepareQuery(crit, countReq);
+		}
+
 		public Query query() {						
 			addNameRestriction();		
 			addSiteRestriction();
@@ -100,10 +205,13 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 			addStoreSpecimenRestriction();
 			
 			addParentRestriction();
+			addCanHoldRestriction();
 			
-			String hql = new StringBuilder(from).append(" ").append(where)
-					.append(" order by c.id asc")
-					.toString();
+			String hql = new StringBuilder(select)
+				.append(" ").append(from)
+				.append(" ").append(where)
+				.append(" order by c.id asc")
+				.toString();
 			
 			Query query = sessionFactory.getCurrentSession().createQuery(hql)
 					.setFirstResult(crit.startAt())
@@ -118,6 +226,23 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 			}
 			
 			return query;
+		}
+		
+		private void prepareQuery(StorageContainerListCriteria crit, boolean countReq) {
+			this.crit = crit;
+				
+			if (crit.hierarchical()) {
+				select = new  StringBuilder(countReq ? "select count (distinct c.id)" : "select distinct c");
+				from = new StringBuilder("from ").append(getType().getName()).append(" c join c.descendentContainers dc");
+				where = new StringBuilder("where dc.activityStatus = :activityStatus");
+			} else {
+				select = new StringBuilder(countReq ? "select count(c.id)" : "select c");
+				from = new StringBuilder("from ").append(getType().getName()).append(" c");
+				where = new StringBuilder("where c.activityStatus = :activityStatus");						
+			}
+
+			from.append(countReq ? " left join c.position pos " : " left join fetch c.position pos ");
+			params.put("activityStatus", Status.ACTIVITY_STATUS_ACTIVE.getStatus());
 		}
 		
 		private void addAnd() {
@@ -171,7 +296,7 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 			}
 		}
 
-		private void addParentRestriction() {			
+		private void addParentRestriction() {
 			if (!crit.topLevelContainers() && crit.parentContainerId() == null) {
 				return;
 			}
@@ -190,6 +315,19 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 				where.append("pc.id = :parentId");
 				params.put("parentId", parentId);						
 			}
+		}
+
+		private void addCanHoldRestriction() {
+			if (StringUtils.isBlank(crit.canHold())) {
+				return;
+			}
+
+			from.append(" left join c.type type");
+			from.append(" left join type.canHold canHold");
+
+			addAnd();
+			where.append("(type is null or canHold.name = :canHold)");
+			params.put("canHold", crit.canHold());
 		}
 
 		private void addSpecimenRestriction() {			
@@ -251,6 +389,11 @@ public class StorageContainerDaoImpl extends AbstractDao<StorageContainer> imple
 			
 			params.put("storeSpecimenEnabled", crit.storeSpecimensEnabled());
 		}
-	}	
-	
+	}
+
+
+	private static final String FQN = StorageContainer.class.getName();
+
+	private static final String GET_SPECIMENS_COUNT = FQN + ".getSpecimensCount";
+
 }

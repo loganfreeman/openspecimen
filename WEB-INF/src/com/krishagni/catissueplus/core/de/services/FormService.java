@@ -72,6 +72,10 @@ public interface FormService {
 	 * Internal usage
 	 */
 	public List<FormData> getSummaryRecords(Long formId, List<Long> recordIds);
+
+	public FormData getRecord(Container form, Long recordId);
 	
 	public ResponseEvent<List<PermissibleValue>> getPvs(RequestEvent<GetFormFieldPvsOp> req);
+
+	public void addFormContextProc(String entity, FormContextProcessor proc);
 }

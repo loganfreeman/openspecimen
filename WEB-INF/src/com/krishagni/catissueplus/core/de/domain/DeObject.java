@@ -6,12 +6,9 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import krishagni.catissueplus.beans.FormContextBean;
-import krishagni.catissueplus.beans.FormRecordEntryBean;
-import krishagni.catissueplus.beans.FormRecordEntryBean.Status;
-
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
@@ -20,10 +17,11 @@ import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.biospecimen.domain.BaseExtensionEntity;
 import com.krishagni.catissueplus.core.common.errors.OpenSpecimenException;
 import com.krishagni.catissueplus.core.common.util.AuthUtil;
+import com.krishagni.catissueplus.core.common.util.MessageUtil;
 import com.krishagni.catissueplus.core.de.events.ExtensionDetail;
+import com.krishagni.catissueplus.core.de.events.ExtensionDetail.AttrDetail;
 import com.krishagni.catissueplus.core.de.events.FormRecordSummary;
 import com.krishagni.catissueplus.core.de.events.FormSummary;
-import com.krishagni.catissueplus.core.de.events.ExtensionDetail.AttrDetail;
 import com.krishagni.catissueplus.core.de.repository.DaoFactory;
 
 import edu.common.dynamicextensions.domain.nui.Container;
@@ -33,6 +31,9 @@ import edu.common.dynamicextensions.napi.ControlValue;
 import edu.common.dynamicextensions.napi.FileControlValue;
 import edu.common.dynamicextensions.napi.FormData;
 import edu.common.dynamicextensions.napi.FormDataManager;
+import krishagni.catissueplus.beans.FormContextBean;
+import krishagni.catissueplus.beans.FormRecordEntryBean;
+import krishagni.catissueplus.beans.FormRecordEntryBean.Status;
 
 @Configurable
 public abstract class DeObject {	
@@ -169,7 +170,7 @@ public abstract class DeObject {
 			other.getAttrs().add(attr.copy());
 		}
 	}
-	
+
 	protected void loadRecordIfNotLoaded() {
 		Long recordId = getId();
 		if (recordLoaded || recordId == null) {
@@ -375,7 +376,7 @@ public abstract class DeObject {
 		
 		return formCtxt;
 	}
-	
+
 	private List<Attr> getAttrs(FormData formData) {
 		List<Attr> attrs = new ArrayList<Attr>();
 		for (ControlValue cv : formData.getOrderedFieldValues()) {
@@ -401,18 +402,32 @@ public abstract class DeObject {
 		return attrs;
 	}
 
+	public Map<String, String> getLabelValueMap() {
+		String notSpecified = MessageUtil.getInstance().getMessage("common_not_specified");
+		return getAttrs().stream().collect(
+			Collectors.toMap(attr -> attr.getCaption(), attr -> attr.getDisplayValue(notSpecified)));
+	}
+
 	public static class Attr {
+		private ControlValue ctrlValue;
+
 		private String name;
-		
+
 		private String udn;
-		
+
 		private String caption;
-		
+
 		private Object value;
-		
+
 		private String type;
-		
-		private boolean phi;
+
+		public ControlValue getCtrlValue() {
+			return ctrlValue;
+		}
+
+		public void setCtrlValue(ControlValue ctrlValue) {
+			this.ctrlValue = ctrlValue;
+		}
 
 		public String getName() {
 			return name;
@@ -445,7 +460,7 @@ public abstract class DeObject {
 		public void setValue(Object value) {
 			this.value = value;
 		}
-		
+
 		public String getType() {
 			return type;
 		}
@@ -454,36 +469,45 @@ public abstract class DeObject {
 			this.type = type;
 		}
 
-		public boolean isPhi() {
-			return phi;
+		public String getDisplayValue() {
+			return ctrlValue.getControl().toDisplayValue(ctrlValue.getValue());
 		}
 
-		public void setPhi(boolean phi) {
-			this.phi = phi;
+		public String getDisplayValue(String defValue) {
+			String result = getDisplayValue();
+			if (StringUtils.isBlank(result)) {
+				return  defValue;
+			}
+
+			return result;
+		}
+
+		public boolean isPhi() {
+			return ctrlValue.getControl().isPhi();
+		}
+
+		public Attr copy() {
+			Attr copy = new Attr();
+			BeanUtils.copyProperties(this, copy);
+			return copy;
 		}
 
 		public static Attr from(ControlValue cv) {
 			Attr attr = new Attr();
-			attr.setName(cv.getControl().getName()); 
+			attr.setCtrlValue(cv);
+			attr.setName(cv.getControl().getName());
 			attr.setUdn(cv.getControl().getUserDefinedName());
 			attr.setCaption(cv.getControl().getCaption());
 			attr.setType(cv.getControl().getCtrlType());
-			attr.setPhi(cv.getControl().isPhi());
-			
+
 			Object value = cv.getValue();
 			if (value != null && value.getClass().isArray()) {
 				value = Arrays.asList((String[])value);
 			} else if (value instanceof FileControlValue) {
 				value = ((FileControlValue) value).toValueMap();
 			}
+
 			attr.setValue(value);
-			
-			return attr;
-		}
-		
-		public Attr copy() {
-			Attr attr = new Attr();
-			BeanUtils.copyProperties(this, attr);
 			return attr;
 		}
 	}

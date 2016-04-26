@@ -1,25 +1,35 @@
 package com.krishagni.catissueplus.core.administrative.events;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
+
 import com.krishagni.catissueplus.core.administrative.domain.DistributionOrder;
 import com.krishagni.catissueplus.core.common.events.UserSummary;
 
-public class DistributionOrderDetail extends DistributionOrderSummary {
+public class DistributionOrderDetail extends DistributionOrderSummary implements Mergeable<String, DistributionOrderDetail>, Serializable {
 	private UserSummary distributor;
 	
 	private String trackingUrl;
 	
 	private String comments;
+
+	private SpecimenRequestSummary request;
 	
 	private List<DistributionOrderItemDetail> orderItems = new ArrayList<DistributionOrderItemDetail>();
 	
 	private String activityStatus;
 
 	private Map<String, Object> extraAttrs;
+
+	//
+	// For BO template
+	//
+	private DistributionOrderItemDetail orderItem;
 
 	public UserSummary getDistributor() {
 		return distributor;
@@ -43,6 +53,14 @@ public class DistributionOrderDetail extends DistributionOrderSummary {
 
 	public void setComments(String comments) {
 		this.comments = comments;
+	}
+
+	public SpecimenRequestSummary getRequest() {
+		return request;
+	}
+
+	public void setRequest(SpecimenRequestSummary request) {
+		this.request = request;
 	}
 
 	public List<DistributionOrderItemDetail> getOrderItems() {
@@ -69,6 +87,14 @@ public class DistributionOrderDetail extends DistributionOrderSummary {
 		this.extraAttrs = extraAttrs;
 	}
 
+	public DistributionOrderItemDetail getOrderItem() {
+		return orderItem;
+	}
+
+	public void setOrderItem(DistributionOrderItemDetail orderItem) {
+		this.orderItem = orderItem;
+	}
+
 	public static DistributionOrderDetail from(DistributionOrder order) {
 		DistributionOrderDetail detail = new DistributionOrderDetail();
 		fromTo(order, detail);
@@ -77,6 +103,10 @@ public class DistributionOrderDetail extends DistributionOrderSummary {
 			detail.setDistributor(UserSummary.from(order.getDistributor()));
 		}
 
+		if (order.getRequest() != null) {
+			detail.setRequest(SpecimenRequestSummary.from(order.getRequest()));
+		}
+		
 		detail.setTrackingUrl(order.getTrackingUrl());
 		detail.setComments(order.getComments());
 		detail.setOrderItems(DistributionOrderItemDetail.from(order.getOrderItems()));
@@ -86,5 +116,16 @@ public class DistributionOrderDetail extends DistributionOrderSummary {
 	
 	public static List<DistributionOrderDetail> from(List<DistributionOrder> orders) {
 		return orders.stream().map(DistributionOrderDetail::from).collect(Collectors.toList());
+	}
+
+	@Override
+	@JsonIgnore
+	public String getMergeKey() {
+		return getName();
+	}
+
+	@Override
+	public void merge(DistributionOrderDetail other) {
+		getOrderItems().add(other.getOrderItem());
 	}
 }

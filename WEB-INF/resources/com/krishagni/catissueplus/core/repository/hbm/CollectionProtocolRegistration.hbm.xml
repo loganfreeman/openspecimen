@@ -85,6 +85,17 @@
         cpr.collectionProtocol.shortTitle = :shortTitle and
         cpr.ppid = :ppid
     </query>
+
+    <query name="getCprByCpShortTitleAndEmpi">
+      select
+        cpr
+      from
+        com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolRegistration cpr
+        join cpr.participant p
+      where
+        cpr.collectionProtocol.shortTitle = :shortTitle and
+        p.empi = :empi
+    </query>
     
     <query name="getCprByCpIdAndPid">
       select
@@ -94,6 +105,15 @@
       where
         cpr.collectionProtocol.id = :cpId and
         cpr.participant.id = :participantId 
+    </query>
+
+    <query name="getCprsByCpId">
+      select
+        cpr
+      from
+        com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolRegistration cpr
+      where
+        cpr.collectionProtocol.id = :cpId
     </query>
   </class>
 </hibernate-mapping>

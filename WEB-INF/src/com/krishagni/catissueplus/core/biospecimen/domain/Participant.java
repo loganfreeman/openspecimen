@@ -5,27 +5,24 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 import com.krishagni.catissueplus.core.administrative.domain.Site;
-import com.krishagni.catissueplus.core.biospecimen.ConfigParams;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.ParticipantErrorCode;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.ParticipantUtil;
-import com.krishagni.catissueplus.core.biospecimen.repository.DaoFactory;
 import com.krishagni.catissueplus.core.common.CollectionUpdater;
 import com.krishagni.catissueplus.core.common.errors.OpenSpecimenException;
 import com.krishagni.catissueplus.core.common.service.MpiGenerator;
-import com.krishagni.catissueplus.core.common.util.ConfigUtil;
 import com.krishagni.catissueplus.core.common.util.Status;
 import com.krishagni.catissueplus.core.common.util.Utility;
 
-@Configurable
 @Audited
 public class Participant extends BaseExtensionEntity {
 	private static final String ENTITY_NAME = "participant";
@@ -59,9 +56,6 @@ public class Participant extends BaseExtensionEntity {
 	protected Set<ParticipantMedicalIdentifier> pmis = new HashSet<ParticipantMedicalIdentifier>();
 
 	protected Set<CollectionProtocolRegistration> cprs = new HashSet<CollectionProtocolRegistration>();
-	
-	@Autowired
-	private DaoFactory daoFactory;
 	
 	public static String getEntityName() {
 		return ENTITY_NAME;
@@ -275,7 +269,17 @@ public class Participant extends BaseExtensionEntity {
 	public String getEntityType() {
 		return "ParticipantExtension";
 	}
+
+	public List<ParticipantMedicalIdentifier> getPmisOrderedById() {
+		return getPmis().stream()
+			.sorted((p1, p2) -> ObjectUtils.compare(p1.getId(), p2.getId()))
+			.collect(Collectors.toList());
+	}
 	
+	public CollectionProtocolRegistration getCpr(CollectionProtocol cp) {
+		return getCprs().stream().filter(cpr -> cpr.getCollectionProtocol().equals(cp)).findFirst().orElse(null);
+	}
+
 	private void updatePmis(Participant participant) {
 		for (ParticipantMedicalIdentifier pmi : participant.getPmis()) {
 			ParticipantMedicalIdentifier existing = getPmiBySite(getPmis(), pmi.getSite().getName());
@@ -325,9 +329,4 @@ public class Participant extends BaseExtensionEntity {
 		
 		return result;
 	}
-	
-	private String getMpiCfgProp(String property) {
-		return ConfigUtil.getInstance().getStrSetting(ConfigParams.MODULE, property, null);
-	}
-	
 }
