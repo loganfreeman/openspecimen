@@ -29,7 +29,7 @@ public enum DistributionOrderErrorCode implements ErrorCode {
 	
 	ALREADY_EXECUTED,
 
-	DUPLICATE_SPECIMEN,
+	DUPLICATE_SPECIMENS,
 	
 	INVALID_SPECIMEN_STATUS,
 	

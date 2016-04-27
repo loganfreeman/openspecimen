@@ -123,19 +123,19 @@ public class DistributionOrderFactoryImpl implements DistributionOrderFactory {
 
 	private void setRequesterAndReceivingSite(DistributionOrderDetail detail, DistributionOrder order, OpenSpecimenException ose) {
 		SpecimenRequest request = order.getRequest();
-		if ((request == null || request.getRequestor() == null) && detail.getRequester() == null) {
-			ose.addError(DistributionOrderErrorCode.REQUESTER_REQ);
-			return;
-		}
-
 		User requestor = null;
 		if (request != null) {
 			requestor = request.getRequestor();
-		} else {
+		} else if (detail.getRequester() != null) {
 			requestor = getUser(detail.getRequester(), null, ose, DistributionOrderErrorCode.REQUESTER_NOT_FOUND);
 			if (requestor == null) {
 				return;
 			}
+		}
+
+		if (requestor == null) {
+			ose.addError(DistributionOrderErrorCode.REQUESTER_REQ);
+			return;
 		}
 
 		order.setRequester(requestor);
@@ -207,7 +207,7 @@ public class DistributionOrderFactoryImpl implements DistributionOrderFactory {
 		}
 
 		boolean error = false;
-
+		Set<String> duplicateSpecimens = new HashSet<>();
 		for (DistributionOrderItemDetail oid : detail.getOrderItems()) {
 			if (oid == null) { //in BO if order item details are not specified it gets null entry
 				continue;
@@ -221,14 +221,17 @@ public class DistributionOrderFactoryImpl implements DistributionOrderFactory {
 			
 			items.add(item);
 			if (!specimens.add(item.getSpecimen().getId())) {
-				ose.addError(DistributionOrderErrorCode.DUPLICATE_SPECIMEN, item.getSpecimen().getLabel());
-				error = true;
-				break;
+				duplicateSpecimens.add(item.getSpecimen().getLabel());
 			}
 		}
 
 		if (!error && CollectionUtils.isEmpty(items)) {
 			ose.addError(DistributionOrderErrorCode.NO_SPECIMENS_TO_DIST);
+			return;
+		}
+
+		if (CollectionUtils.isNotEmpty(duplicateSpecimens)) {
+			ose.addError(DistributionOrderErrorCode.DUPLICATE_SPECIMENS, duplicateSpecimens);
 			return;
 		}
 
