@@ -4,8 +4,7 @@ function osRequired($timeout) {
     restrict: 'A',
     link: function(scope, element, attrs, ctrl) {
       var setDirty = function() {
-        var form = scope.$eval(ctrl.$name);
-        form[attrs.name].$setDirty(true);
+        ctrl[attrs.name].$setDirty(true);
       }
 
       if (element.hasClass('os-select-container') || element.children().first().is('ui-select')) {
@@ -25,6 +24,8 @@ angular.module('os.common.form', [])
       restrict: 'A',
 
       controller: function($scope) {
+        this._cachedValues = {};
+
         this._formSubmitted = false;
 
         this._parentValidator = undefined;
@@ -62,6 +63,15 @@ angular.module('os.common.form', [])
         this.setParentValidator = function(parentValidator) {
           this._parentValidator = parentValidator;
         };
+
+        this.getCachedValues = function(group, prop, getter) {
+          var key = group + "_" + prop;
+          if (!this._cachedValues[key]) {
+            this._cachedValues[key] = getter();
+          }
+
+          return this._cachedValues[key];
+        }
       },
 
       link: function(scope, element, attrs, controller) {

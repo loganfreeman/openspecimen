@@ -2,26 +2,23 @@
 angular.module('os.administrative.form.list', ['os.administrative.models'])
   .controller('FormListCtrl', function(
     $scope, $state, $modal, $translate, Form, FormEntityReg,
-    CollectionProtocol, Util, DeleteUtil, Alerts) {
+    CollectionProtocol, Util, DeleteUtil, Alerts, ListPagerOpts) {
+
+    var cpListQ = undefined;
+    var pagerOpts;
 
     function init() {
       $scope.formFilterOpts = {};
-      $scope.entityMap = {
-        Participant: 'participant', 
-        Specimen: 'specimen', 
-        SpecimenCollectionGroup: 'visit', 
-        SpecimenEvent: 'specimen_event'
-      };
-      $scope.cpList = [];
       $scope.formsList = [];
+      pagerOpts = $scope.pagerOpts = new ListPagerOpts({listSizeGetter: getFormsCount});
       loadForms($scope.formFilterOpts);
-      loadCollectionProtocols();
       Util.filter($scope, 'formFilterOpts', loadForms);
     }
 
     function loadForms(filterOpts) {
       Form.query(filterOpts).then(function(result) {
         $scope.formsList = result;
+        pagerOpts.refreshOpts(result);
       })
     }
 
@@ -29,13 +26,13 @@ angular.module('os.administrative.form.list', ['os.administrative.models'])
       loadForms($scope.formFilterOpts);
     }
 
-    function loadCollectionProtocols() {
-      CollectionProtocol.list().then(
-        function(cpList) {
-          $scope.cpList = cpList;
-        }
-      );
-    };
+    function getCpList() {
+      if (!cpListQ) {
+        cpListQ = CollectionProtocol.list({detailedList: false});
+      }
+
+      return cpListQ;
+    }
 
     function deleteForm(form) {
       form.$remove().then(
@@ -46,43 +43,62 @@ angular.module('os.administrative.form.list', ['os.administrative.models'])
       );
     }
 
+    function getFormsCount() {
+      return Form.getCount($scope.formFilterOpts);
+    }
+
     $scope.openForm = function(form) {
       $state.go('form-addedit', {formId: form.formId});
     }
 
     $scope.showFormContexts = function(form) {
-      form.getFormContexts().then(function(formCtxts) {
-        var formCtxtsModal = $modal.open({
-          templateUrl: 'modules/administrative/form/association.html',
-          controller: 'FormCtxtsCtrl',
+      form.getFormContexts().then(
+        function(formCtxts) {
+          var formCtxtsModal = $modal.open({
+            templateUrl: 'modules/administrative/form/association.html',
+            controller: 'FormCtxtsCtrl',
 
-          resolve: {
-            args: function() {
-              return {
-                formCtxts: formCtxts,
-                form: form,
-                cpList: $scope.cpList
+            resolve: {
+              args: function() {
+                return {
+                  formCtxts: formCtxts,
+                  form: form
+                }
+              },
+
+              cpList: function() {
+                return getCpList();
+              },
+
+              entities: function(FormEntityReg) {
+                return FormEntityReg.getEntities();
               }
-            },
-
-            entities: function(FormEntityReg) {
-              return FormEntityReg.getEntities();
-            }
-          }
-        });
-
-        formCtxtsModal.result.then(
-          function(reload) {
-            if (reload) {
-              reloadForms();
             }
           });
-      });
+
+          formCtxtsModal.result.then(
+            function(reload) {
+              if (reload) {
+                reloadForms();
+              }
+            }
+          );
+        }
+      );
     };
 
 
     $scope.confirmFormDeletion = function(form) {
-      form.entityMap = $scope.entityMap;
+      FormEntityReg.getEntities().then(
+        function(entities) {
+          form.entityMap = {};
+          angular.forEach(entities,
+            function(entity) {
+              form.entityMap[entity.name] = entity.caption;
+            }
+          );
+        }
+      );
       form.dependentEntities = [];
       form.getDependentEntities().then(
         function(result) {

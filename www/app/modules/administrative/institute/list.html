@@ -17,14 +17,14 @@
         <ul class="dropdown-menu dropdown-menu-right">
           <li>
             <a ui-sref="institute-import">
-              <i class="fa fa-institution"></i>
+              <span class="fa fa-institution"></span>
               <span translate="institutes.list">Institutes</span>
             </a>
           </li>
           <li>
             <a ui-sref="institute-import-jobs">
-              <i class="fa fa-table"></i>
-              <span translate="common.view_jobs">View Jobs</span>
+              <span class="fa fa-list-alt"></span>
+              <span translate="bulk_imports.view_jobs">View Jobs</span>
             </a>
           </li>
         </ul>
@@ -37,6 +37,9 @@
   </div>
 
   <div class="container">
+    <div>
+      <os-list-pager opts="pagerOpts"> </os-list-pager>
+    </div>
     <table class="os-table os-table-hover">
       <thead class="os-table-head">
         <tr class="row">

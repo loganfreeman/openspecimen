@@ -1,54 +1,51 @@
-angular.module('os.administrative.form.entities', [])
-  .factory('FormEntityReg', function($translate) {
-    var entities = [];
-    var inited = false;
+angular.module('os.administrative.form.entities', ['os.common'])
+  .factory('FormEntityReg', function(osDisplayList) {
+    var list = osDisplayList();
 
-    function getEntities() {
-      return $translate('common.none').then(
-        function() {
-          if (inited) {
-            return entities;
-          }
+    list.addItem({name: 'Participant', key: 'entities.participant', caption: ''});
+    list.addItem({name: 'SpecimenCollectionGroup', key: 'entities.visit', caption: ''});
+    list.addItem({name: 'Specimen', key: 'entities.specimen', caption: ''});
+    list.addItem({name: 'SpecimenEvent', caption: '', key: 'entities.specimen_event', allCps: true});
 
-          entities = entities.map(
-            function(entity) {
-              entity.caption = $translate.instant(entity.key);
-              return entity;
-            }
-          );
+    list.addItem({
+      name: 'ParticipantExtension',
+      caption: '', key: 'entities.participant_extension',
+      multipleRecs: false
+    });
 
-          inited = true;
-          return entities;
-        }
-      );
-    }
+    list.addItem({
+      name: 'VisitExtension',
+      caption: '', key: 'entities.visit_extension',
+      multipleRecs: false
+    });
 
-    function addEntity(entity) {
-      var existing = undefined;
-      for (var i = 0; i < entities.length; ++i) {
-        if (entities[i].name == entity.name) {
-          existing = entities[i];
-          break;
-        }
-      }
+    list.addItem({
+      name: 'SpecimenExtension',
+      caption: '', key: 'entities.specimen_extension',
+      multipleRecs: false
+    });
 
-      if (!existing) {
-        entities.push(entity);
-      }
-    }
+    list.addItem({
+      name: 'SiteExtension',
+      caption: '', key: 'entities.site_extension',
+      allCps: true, multipleRecs: false
+    });
 
-    function init() {
-      addEntity({name: 'Participant', key: 'entities.participant', caption: ''});
-      addEntity({name: 'SpecimenCollectionGroup', key: 'entities.visit', caption: ''});
-      addEntity({name: 'Specimen', key: 'entities.specimen', caption: ''});
-      addEntity({name: 'SpecimenEvent', caption: '', key: 'entities.specimen_event', allCps: true});
-    }
+    list.addItem({
+      name: 'CollectionProtocolExtension',
+      caption: '', key: 'entities.cp_extension',
+      allCps: true, multipleRecs: false
+    });
 
-    init();
+    list.addItem({
+      name: 'DistributionProtocolExtension',
+      caption: '', key: 'entities.dp_extension',
+      allCps: true, multipleRecs: false
+    });
 
     return {
-      getEntities: getEntities,
+      getEntities: list.getItems,
 
-      addEntity: addEntity
+      addEntity: list.addItem
     }
   });

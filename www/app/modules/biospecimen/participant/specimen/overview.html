@@ -1,6 +1,27 @@
-
 <div class="clearfix">
   <div class="col-xs-8">
+    <div ng-switch on="fieldsCtx.hasDict">
+      <div ng-switch-when="true">
+        <sde-fields-overview base-fields="fieldsCtx.sysDict" fields="fieldsCtx.cpDict"
+          obj="spmnCtx.obj" in-objs="spmnCtx.inObjs" ex-objs="spmnCtx.exObjs">
+        </sde-fields-overview>
+      </div>
+      <div ng-switch-default>
+        <div ng-include="'modules/biospecimen/participant/specimen/static-fields.html'"></div>
+      </div>
+    </div>
+
+    <os-specimen-tree cp="cp" cpr="cpr" visit="visit" specimens="treeSpecimens"
+      allowed-ops="specimenAllowedOps" reload="reload()">
+    </os-specimen-tree>
+  </div>
+  <div class="col-xs-4">
+    <div ng-include="'modules/biospecimen/participant/specimen/activities.html'"></div>
+  </div>
+</div>
+
+<script type="text/ng-template" id="modules/biospecimen/participant/specimen/static-fields.html">
+  <div>
     <ul class="os-key-values os-two-cols">
       <li class="item">
         <strong class="key key-sm" translate="specimens.lineage">Lineage</strong>
@@ -16,7 +37,11 @@
             <span ng-switch-default class="value value-md os-status-pending">Pending</span>
           </ng-switch>
           <ng-switch ng-switch-when="false" on="specimen.distributionStatus">
-            <span ng-switch-when="Distributed" class="value value-md os-status-distributed">Distributed</span>
+            <span ng-switch-when="Distributed">
+              <span class="value value-md" ng-class="specimen.availableQty > 0 ? 'os-status-part-distributed' : 'os-status-distributed'">
+                Distributed
+              </span>
+            </span>
             <span ng-switch-when="Returned" class="value value-md os-status-returned">Returned</span>
           </ng-switch>
         </ng-switch>
@@ -64,8 +89,7 @@
 
       <li class="item">
         <strong class="key key-sm" translate="specimens.concentration">Concentration</strong>
-        <span class="value value-md" 
-          ng-switch="specimen.concentration != undefined && specimen.concentration != null">
+        <span class="value value-md" ng-switch="specimen.concentration != undefined && specimen.concentration != null">
           <span ng-switch-when="true">
             {{specimen.concentration | osNumberInScientificNotation}}
             <os-specimen-unit specimen-class="specimen.specimenClass" type="specimen.type" measure="concentration">
@@ -80,7 +104,7 @@
         <ng-switch on="!!specimen.parentId">
           <span class="value value-md" ng-switch-when="true">
             <a ui-sref="specimen-detail.overview(
-                         {eventId: visit.eventId, visitId: visit.id, specimenId: specimen.parentId, srId: specimen.reqId})">
+              {eventId: visit.eventId, visitId: visit.id, specimenId: specimen.parentId, srId: specimen.reqId})">
               <span ng-if="!!specimen.parentLabel">{{specimen.parentLabel}}</span>
               <span ng-if="!specimen.parentLabel" translate="specimens.parent_specimen">Parent Specimen</span>
             </a>
@@ -93,8 +117,7 @@
         <strong class="key key-sm" translate="specimens.pooled_specimen">Pooled Specimen</strong>
         <span class="value value-md">
           <a ui-sref="specimen-detail.overview(
-                        {eventId: visit.eventId, visitId: visit.id, 
-                         specimenId: specimen.pooledSpecimenId, srId: specimen.reqId})">
+            {eventId: visit.eventId, visitId: visit.id, specimenId: specimen.pooledSpecimenId, srId: specimen.reqId})">
             <span ng-if="!!specimen.pooledSpecimenLabel">{{specimen.pooledSpecimenLabel}}</span>
             <span ng-if="!specimen.pooledSpecimenLabel" translate="specimens.pooled_specimen">Pooled Specimen</span>
           </a>
@@ -111,7 +134,7 @@
         <ng-switch on="!!specimen.storageLocation.id && specimen.storageLocation.id != -1">
           <span class="value value-md" ng-switch-when="true">
             {{specimen.storageLocation.name}} 
-              ({{specimen.storageLocation.positionY}} x {{specimen.storageLocation.positionX}})
+            ({{specimen.storageLocation.positionY}} x {{specimen.storageLocation.positionX}})
           </span>
           <span class="value value-md" ng-switch-default translate="specimens.virtually_located"> 
             Virtual 
@@ -146,12 +169,11 @@
       </strong>
       <span class="value value-md">{{specimen.comments}}</span>
     </div>
-
-    <os-specimen-tree cp="cp" cpr="cpr" visit="visit" specimens="treeSpecimens" allowed-ops="specimenAllowedOps" reload="reload()">
-    </os-specimen-tree>
   </div>
+</script>
 
-  <div class="col-xs-4">
+<script type="text/ng-template" id="modules/biospecimen/participant/specimen/activities.html">
+  <div>
     <h3 class="os-sub-section-title" translate="specimens.recent_events">
       Recent Activity
     </h3>
@@ -183,4 +205,4 @@
       </li>
     </ul>
   </div>
-</div>
+</script>

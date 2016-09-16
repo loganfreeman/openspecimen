@@ -356,7 +356,7 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 		
 		if (StringUtils.isBlank(anatomicSite)) {
 			if (specimen.getSpecimenRequirement() == null) {
-				ose.addError(SpecimenErrorCode.ANATOMIC_SITE_REQUIRED);
+				specimen.setTissueSite(Specimen.NOT_SPECIFIED);
 			}
 			
 			return;				
@@ -398,7 +398,7 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 		
 		if (StringUtils.isBlank(laterality)) {
 			if (specimen.getSpecimenRequirement() == null) {
-				ose.addError(SpecimenErrorCode.LATERALITY_REQUIRED);
+				specimen.setTissueSide(Specimen.NOT_SPECIFIED);
 			}
 			
 			return;
@@ -444,7 +444,7 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 		
 		if (StringUtils.isBlank(pathology)) {
 			if (specimen.getSpecimenRequirement() == null) {
-				ose.addError(SpecimenErrorCode.PATHOLOGY_STATUS_REQUIRED);
+				specimen.setPathologicalStatus(Specimen.NOT_SPECIFIED);
 			}
 			
 			return;
@@ -702,15 +702,18 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 			//
 			return;
 		}
-		
+
+		Object key = null;
 		if (location.getId() != null && location.getId() != -1) {
+			key = location.getId();
 			container = daoFactory.getStorageContainerDao().getById(location.getId());			
 		} else {
+			key = location.getName();
 			container = daoFactory.getStorageContainerDao().getByName(location.getName());
 		} 
 		
 		if (container == null) {
-			ose.addError(StorageContainerErrorCode.NOT_FOUND);
+			ose.addError(StorageContainerErrorCode.NOT_FOUND, key);
 			return;
 		}
 		

@@ -51,8 +51,6 @@
     "server_connect_error": "Unable to connect server",
     "recent_activity": "Recent Activity",
     "no_file_selected": "No File Selected",
-    "view_jobs": "View Jobs",
-    "view_import_jobs": "View Import Jobs",
     "digits": "digits",
     "not_specified": "Not Specified",
     "enabled": "Enabled",
@@ -99,9 +97,9 @@
       "add_another": "Add Another",
       "download": "Download",
       "reset_password": "Reset Password",
-      "print": "Print",
       "skip": "Skip",
-      "back": "Back"
+      "back": "Back",
+      "list_view": "List View"
     }
   },
 
@@ -149,6 +147,10 @@
     "ppid_fmt": "PPID Format",
     "clinical_diagnoses": "Clinical Diagnoses",
     "anticipated_participants_cnt": "Anticipated Participants Count",
+    "sop_document": "SOP Document",
+    "sop_document_url": "SOP Document URL",
+    "sop_document_file": "SOP Document File",
+    "download_sop": "Download SOP",
     "desc_url": "Description URL",
     "specimen_label_fmt": "Specimen Label Format",
     "derivative_label_fmt": "Derivative Label Format",
@@ -163,11 +165,12 @@
     "participant_count": "Participants",
     "specimen_count": "Specimens",
     "view_details": "View Details",
-    "view_participants": "View Participants",
+    "view_list": "View List",
     "view_catalog": "View Catalog",
     "disable_pre_print_warning": "Turning off pre-printing at collection protocol level will turn it off for all specimen requirements too",
-    "print_settings": "Print Settings",
     "lineage": "Lineage",
+    "visit_print_settings": "Visit Print Settings",
+    "spmn_print_settings": "Specimen Print Settings",
     "when_to_print": "When to Print",
     "copies": "Copies",
 
@@ -205,7 +208,7 @@
       "consents": "Consents",
       "events": "Events",
       "users": "Users",
-      "catalog_settings": "Catalog Settings"
+      "settings": "Settings"
     },
 
     "menu_options": {
@@ -232,10 +235,10 @@
       "select_repository": "Select Repository"
     },
 
-    "label_formats" : "Label Formats",
     "anticipated_participant_count": "Expected Registrations",
 
     "label_format": {
+      "title": "Label Format and Print Settings",
       "specimen": "Specimen",
       "visit": "Visit",
       "aliquot": "Aliquot",
@@ -245,9 +248,15 @@
     },
 
     "catalog": {
-      "title": "Catalog Settings",
+      "title": "Catalog settings",
       "query": "Query",
       "query_desc": "Select saved query to use for Specimen Catalog"
+    },
+
+    "visit_name_print_modes": {
+      "PRE_PRINT": "Pre-print",
+      "ON_COMPLETION": "On Completion",
+      "NONE": "None"
     },
 
     "spmn_label_pre_print_modes": {
@@ -255,7 +264,7 @@
       "NONE": "None"
     },
 
-     "spmn_lineages": {
+    "spmn_lineages": {
       "New": "Primary",
       "Derived": "Derivative",
       "Aliquot": "Aliquot"
@@ -263,6 +272,7 @@
   },
 
   "participant": {
+    "title": "Participant",
     "list": "Participants",
    
     "id": "MPI / MRN / NIN",
@@ -322,13 +332,7 @@
       "lnameAndDob": "Last Name and DOB"
     },
 
-    "bulk_reg_participants": "Bulk Register Participants",
-    "bulk_update_participants": "Bulk Update Participants",
-    "bulk_import_master_specimens": "Bulk Import Master Specimens",
-    "part_updates": "Participant Updates",
-    "part_extensions": "Participant Forms",
     "consents": "Consents",
-    "bulk_import_consents": "Bulk Import Consents",
     "registrations": "Participant Registrations",
     "master_specimens": "Master Specimens",
     "registered_cps": "Registered Protocols",
@@ -342,7 +346,8 @@
       "ignore_matches": "Ignore Matches and Proceed",
       "lookup_again": "Lookup Again",
       "bulk_register": "Bulk Register",
-      "specimen_catalog": "Specimen Catalog"
+      "specimen_catalog": "Specimen Catalog",
+      "import": "Import"
     },
 
     "menu": {
@@ -387,8 +392,7 @@
     "eos": "EOS",
     "end_of_study": "End of Study",
 
-    "bulk_import": "Bulk Import Visits",
-    "visit_extensions": "Visit Forms",
+    "names_print_job_created": "Visit names print job {{jobId}} created successfully",
 
     "spr": "Surgical Pathology Report",
     "upload_spr": "Upload Surgical Pathology Report",
@@ -454,11 +458,14 @@
     "initial_qty": "Initial Quantity",
     "available_qty": "Available Quantity",
     "parent_specimen": "Parent Specimen",
+    "parent_type": "Parent Type",
     "storage_location": "Storage Location",
     "virtually_located": "Virtual",
-    "no_specimens_to_show": "No Specimens to Show",
+    "no_specimens_to_show": "No Child Specimens to Show",
     "aliquot_cnt": "Count of Aliquots",
     "qty_per_aliquot": "Quantity per Aliquot",
+    "aliquots_created": "Successfully created aliquots",
+    "derivatives_created": "Successfully created derived specimens",
     "close_parent_q": "Do you want to close parent specimen?",
     "concentration": "Concentration",
     "freeze_thaw_cycles": "Freeze/Thaw Cycles",
@@ -476,7 +483,7 @@
     "biohazards": "Biohazards",
     "created_on": "Created On",
     "concentration_unit": "&#181;g/&#181;l",
-    "copy_first_to_all": "Copy First To All",
+    "copy_first_to_all": "Copy first to all",
     "row": "Row",
     "column": "Column",
     "activity_full_info": "{{user}} created {{name}} on {{time | date: global.dateTimeFmt}}",
@@ -485,6 +492,8 @@
     "activity_info": "{{name}} created",
     "activity_status": "Activity Status",
     "location" : "Location",
+    "print": "Print",
+    "close_parent": "Close Parent",
 
     "reason_for_closing": "Reason for closing",
 
@@ -509,13 +518,8 @@
     "visit_site": "Visit Site",
 
     "labels_print_job_created": "Specimen labels print job {{jobId}} created successfully",
-    "bulk_import": "Bulk Import Specimens",
-    "spmn_extensions": "Specimen Forms",
-    "spmn_events": "Specimen Events",
     "spmn_aliquots": "Specimen Aliquots",
-    "bulk_import_aliquots": "Bulk Import Aliquots",
     "spmn_derivatives": "Specimen Derivatives",
-    "bulk_import_derivatives": "Bulk Import Derivatives",
     "new_aliquot_count": "Number of aliquots",
 
     "specimens_hierarchy_deleted": "Selected specimens and their children are deleted successfully",
@@ -524,11 +528,11 @@
     "delete_specimens":  "Are you sure you want to delete selected specimens ?",
     "specimens_closed": "Selected specimens are closed successfully",
     "specimen_closed": "Specimen is closed successfully",
-    "create_derivative": "Create Derivative",
+    "create_derivative": "Create Derived Specimen",
     "create_aliquots": "Create Aliquots",
+    "create_derivatives": "Create Derived Specimens",
     "specimen_type": "Specimen Type",
     "anatomic_site": "Anatomic Site",
-    "freeze_thaw_cycle_lt_parent": "Child specimen's freeze/thaw cycle count can not be less than that of parent specimen",
 
     "col_event": {
       "title": "Collection Details",
@@ -574,9 +578,13 @@
     "errors": {
       "duplicate_labels": "One or more specimens using same label",
       "insufficient_qty": "Insufficient parent specimen quantity to create aliquots",
+      "insufficient_parent_qty": "Insufficient parent specimen {{label}} quantity to create child specimens",
       "created_on_lt_parent": "Created on time of specimen less than that of parent specimen",
       "created_on_gt_curr_time": "Created on time of specimen greater than current time",
-      "aliquot_label_mismatch": "There is a mismatch in number of specified labels and aliquots"
+      "children_created_on_lt_parent": "Created on time of children less than that of parent specimen {{parentLabel}}",
+      "children_created_on_gt_curr_time": "Created on time of {{parentLabel}}'s children greater than current time",
+      "aliquot_label_mismatch": "There is a mismatch in number of specified labels and aliquots",
+      "visit_not_completed": "Please complete the visit before collecting unplanned specimen"
     },
 
     "bulk_events": {
@@ -825,6 +833,7 @@
     "department": "Department",
     "address": "Address",
     "super_admin": "Super Administrator",
+    "manage_forms": "Manage Forms?",
     "login_details": "Login Details",
     "permissions": "Permissions",
     "login_name": "Login Name",
@@ -863,6 +872,17 @@
        "role": "Role",
        "no_roles": "There are no roles to show. Add a new role by clicking Add Role...",
        "all": "All Current and Future"
+    },
+
+    "announcement": {
+      "tooltip": "Click to broadcast announcement to all active users",
+      "new": "New Announcement",
+      "title": "Broadcast announcement to active users",
+      "info": "Announcement will be sent to all active users since {{activeFromDt | date: global.dateFmt}}",
+      "subject": "Subject",
+      "message": "Message",
+      "message_input": "Type your announcement message here",
+      "success": "Announcement successfully broadcast to all active users"
     },
 
     "create_account": "Create your OpenSpecimen Account",
@@ -983,6 +1003,7 @@
     "creating_hierarchy": "Create Hierarchy?",
     "num_of_containers": "Number of Containers",
     "hierarchy_created_successfully": "Container hierarchy of type {{typeName}} created successfully.",
+    "creation_success": "Container {{name}} successfully created.",
 
     "tooltip": {
       "view_details": "Click to view Container details",
@@ -1146,7 +1167,10 @@
     "confirm_delete": "{{entityType}} {{entityName}} will be deleted forever. Are you sure you want to proceed?",
     "entity_deleted": "{{entityType}} {{entityName}} deleted successfully.",
     "dependents_title": "Error: Cannot delete {{entityName}}",
-    "dependents_details": "Cannot delete {{entityType}} {{entityName}} because of following dependent objects"
+    "dependents_details": "Cannot delete {{entityType}} {{entityName}} because of following dependent objects",
+    "force_delete": "Type 'DELETE ANYWAY' in below textbox to delete CP including its dependent entities.",
+    "delete_anyway": "DELETE ANYWAY",
+    "delete_pending": "{{entityType}} {{entityName}} deletion taking longer time than anticipated. You'll receive an email when it gets completed"
   },
 
   "queries": {
@@ -1351,10 +1375,18 @@
     "consent_response": "Consent Response",
     "consent": "Consent",
     "container": "Container",
-    "container_type": "Container Type"
+    "container_type": "Container Type",
+    "participant_extension": "Participant Custom Fields",
+    "visit_extension": "Visit Custom Fields",
+    "specimen_extension": "Specimen Custom Fields",
+    "site_extension": "Site Custom Fields",
+    "cp_extension": "Collection Protocol Custom Fields",
+    "dp_extension": "Distribution Protocol Custom Fields"
   },
 
   "bulk_imports": {
+    "no_jobs": "No bulk imports jobs to show.",
+
     "job_submitted": "Bulk Import Job {{id}} Submitted",
     "select_extn": "Select Form",
     "input_file": "Input Records File",
@@ -1375,6 +1407,12 @@
     "failed_records": "Failed",
     "status": "Status",
     "file": "Report File",
+
+    "select_record_type": "Select Records Type",
+    "jobs_list": "Bulk Import Jobs",
+    "view_jobs": "View Jobs",
+    "view_import_jobs": "View Import Jobs",
+    "import": "Import",
  
     "object_types": {
       "user": "Users",
@@ -1424,10 +1462,14 @@
     "no_specimens": "There are no specimens to show in selected cart",
     "description": "Description",
     "cp": "Collection Protocol",
+    "ppid": "PPID",
     "label": "Label",
+    "type": "Type",
+    "anatomic_site": "Anatomic Site",
     "location": "Location",
     "quantity": "Quantity",
     "lineage": "Lineage",
+    "container": "Storage Container",
     "remove_specimens": "Removing specimens from cart",
     "confirm_remove_specimens_from_default_list": "Are you sure you want to remove selected specimens from default cart?",
     "confirm_remove_specimens_from_user_default_list": "Are you sure you want to remove selected specimens from {{owner.firstName}} {{owner.lastName}}'s default cart?",
@@ -1447,7 +1489,20 @@
     "checkout": "Checkout",
     "add_event": "Add Event",
     "location": "Storage Location",
-    "no_specimens_to_add_event": "Please select at least one specimen to add event"
+    "no_specimens_to_add_event": "Please select at least one specimen to add event",
+    "create_aliquots": "Create Aliquots",
+    "no_specimens_to_create_aliquots": "Please select at least one parent specimen to create aliquots",
+    "create_derivatives": "Create Derivatives",
+    "no_specimens_to_create_derivatives": "Please select at least one parent specimen to create derived specimens",
+    "filter_specimens": "Specimen Filters",
+    "creation_time": "Creation Time",
+    "last_updated": "Last Updated",
+    "specimens": "Specimens",
+    "filter_lists": "Filters",
+    "search_def_list_tip": "Use $$ to search users' default carts",
+    "add_child_specimens": "Add Child Specimens",
+    "child_specimens_added": "Successfully added {{count}} child specimens",
+    "available_spmns": "Available Specimens"
   },
 
   "orders": {
@@ -1702,7 +1757,9 @@
         "token_inactive_interval": "Session Timeout Limit (minutes)",
         "token_inactive_interval_desc": "Minutes of inactiveness after which a user is automatically logged out.",
         "verify_token_ip_address": "IP Address Validation",
-        "verify_token_ip_address_desc": "Check whether requests are made from the same IP address to which the login token was issued."
+        "verify_token_ip_address_desc": "Check whether requests are made from the same IP address to which the login token was issued.",
+        "saml_enable": "Enable SAML authentication",
+        "saml_enable_desc": "Enable single sign on using SAML based identity provider"
       },
       
       "administrative": {
@@ -1710,7 +1767,9 @@
         "dp_expiry_rem_notif": "DP Expiry Reminder",
         "dp_expiry_rem_notif_desc": "Number of days prior to distribution protocol expiry when email notification should be sent to the PI.",
         "dp_expiry_rem_rept_inter": "Repeat DP Expiry Reminder",
-        "dp_expiry_rem_rept_inter_desc": "Number of days after which email notification should be repeated for distribution protocol expiry."
+        "dp_expiry_rem_rept_inter_desc": "Number of days after which email notification should be repeated for distribution protocol expiry.",
+        "active_users_login_days": "Active User Login Days Criteria",
+        "active_users_login_days_desc": "Number of days elapsed since last login before user is considered as inactive"
       },
 
       "biospecimen": {
@@ -1754,7 +1813,13 @@
         "cp_expiry_rem_notif": "CP Expiry Reminder",
         "cp_expiry_rem_notif_desc": "Number of days prior to collection protocol expiry when email notification should be sent to the PI.",
         "cp_expiry_rem_rept_inter": "Repeat CP Expiry Reminder",
-        "cp_expiry_rem_rept_inter_desc": "Number of days after which email notification should be repeated for collection protocol expiry."
+        "cp_expiry_rem_rept_inter_desc": "Number of days after which email notification should be repeated for collection protocol expiry.",
+        "cp_sop_doc_dir": "CP SOP Documents Directory",
+        "cp_sop_doc_dir_desc": "Folder on server to store collection protocol SOP documents",
+        "cp_sop_doc_url": "CP SOP Link",
+        "cp_sop_doc_url_desc": "System level collection protocol SOP document link",
+        "cp_sop_doc": "CP SOP Document",
+        "cp_sop_doc_desc": "System level collection protocol SOP document"
       },
 
       "common": {
@@ -1778,7 +1843,9 @@
         "field_separator": "Field Separator",
         "field_separator_desc": "A single character that specifies how records in delimited text file should be split into fields. For example: CSV files use comma (,) as the field separator",
         "training_url": "Training URL ",
-        "training_url_desc": "Training documentation URL"
+        "training_url_desc": "Training documentation URL",
+        "deploy_env": "Deployment Environment",
+        "deploy_env_desc": "Any meaningful text that helps users distinguish between various OpenSpecimen deployment environments like test, dev, prod, demo etc"
       },
 
       "email": {
@@ -1844,5 +1911,12 @@
         "max_recs_in_memory": "In-memory Records Limit",
         "max_recs_in_memory_desc": "Maximum number of query records that are allowed to be cached in-memory. When limit is reached, excessive records are spooled to disk"
       }
+    },
+
+    "list_pager": {
+      "showing": "Showing",
+      "of": "of",
+      "many_more": "many more",
+      "records": "records"
     }
 }

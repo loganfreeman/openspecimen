@@ -6,6 +6,11 @@ import com.krishagni.catissueplus.core.common.Pair;
 import com.krishagni.catissueplus.core.common.events.AbstractListCriteria;
 
 public class SpecimenListCriteria extends AbstractListCriteria<SpecimenListCriteria> {
+	private Long cpId;
+
+	private String[] lineages;
+
+	private String[] collectionStatuses;
 
 	private List<Pair<Long, Long>> siteCps;
 	
@@ -14,12 +19,43 @@ public class SpecimenListCriteria extends AbstractListCriteria<SpecimenListCrite
 	private Long specimenListId;
 	
 	private boolean useMrnSites;
+
+	public SpecimenListCriteria() {
+		exactMatch(true);
+	}
 	
 	@Override
 	public SpecimenListCriteria self() {		
 		return this;
 	} 
-	
+
+	public Long cpId() {
+		return cpId;
+	}
+
+	public SpecimenListCriteria cpId(Long cpId) {
+		this.cpId = cpId;
+		return self();
+	}
+
+	public String[] lineages() {
+		return lineages;
+	}
+
+	public SpecimenListCriteria lineages(String[] lineages) {
+		this.lineages = lineages;
+		return self();
+	}
+
+	public String[] collectionStatuses() {
+		return collectionStatuses;
+	}
+
+	public SpecimenListCriteria collectionStatuses(String[] collectionStatuses) {
+		this.collectionStatuses = collectionStatuses;
+		return self();
+	}
+
 	public List<Pair<Long, Long>> siteCps() {
 		return siteCps;
 	}

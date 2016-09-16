@@ -2,8 +2,8 @@
   <div os-page-header>
     <ul os-breadcrumbs>
       <li>
-        <a ui-sref="cp-detail.overview({cpId: cpr.cpId})">
-          {{cpr.cpTitle}}
+        <a ui-sref="cp-list-view({cpId: cpr.cpId})">
+          <span>{{cpr.cpShortTitle}}</span>
         </a> 
       </li>
       <li>
@@ -53,7 +53,7 @@
             <th class="col os-col-5">&nbsp;</th>
           </tr>
         </thead>
-        <tbody class="os-table-body">
+        <tbody class="os-table-body" os-storage-positions>
           <tr class="row" ng-class="{'os-pool-specimen': !!specimen.pooledSpecimen}"
             ng-repeat="specimen in specimens | openedTreeNodes" ng-form="sform" ng-if="specimen.showInTree">
             <td class="col os-col-30">
@@ -104,7 +104,7 @@
                 <span ng-switch on="!!specimen.aliquotGrp && !specimen.expanded">
                   <span ng-switch-when="true">
                     <textarea os-md-input rows="1" name="label" 
-                      ng-model="specimen.aliquotLabels"
+                      ng-model="specimen.aliquotLabels" edit-when="!specimen.pLabel"
                       ng-blur="assignLabels(specimen, specimen.aliquotLabels)" required>
                     </textarea>
                   </span>
@@ -137,7 +137,7 @@
             </td>
             <td class="col os-col-10" style="overflow: visible;">
               <os-select os-md-input edit-when="specimen.existingStatus != 'Collected'" list="specimenStatuses" 
-                ng-model="specimen.status" on-change="statusChanged(specimen)" required> 
+                ng-model="specimen.status" on-change="statusChanged(specimen)" required>
               </os-select>
             </td>
             <td class="col os-col-5">
@@ -163,7 +163,7 @@
 </div>
 
 <script type="text/ng-template" id="specimen_coll_visit_details.html">
-  <div class="form-horizontal os-spmn-coll-detail">
+  <div class="form-horizontal os-md-form">
     <div class="row">
       <div class="col-xs-12">
         <div class="form-group">
@@ -240,7 +240,7 @@
             </os-date-picker>
             <div os-field-error field="collectionForm.receiveDate"></div>
           </div>
-          <div class="col-xs-1 input">
+          <div class="col-xs-1 input os-md-time">
             <timepicker class="os-time-no-wheels" os-md-input ng-model="collDetail.receiveDate" show-meridian="false"></timepicker>
           </div>
         </div>

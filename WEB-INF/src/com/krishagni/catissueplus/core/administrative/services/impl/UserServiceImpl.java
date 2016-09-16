@@ -1,25 +1,33 @@
 
 package com.krishagni.catissueplus.core.administrative.services.impl;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
+import org.opensaml.saml2.core.Attribute;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.saml.SAMLCredential;
 
 import com.krishagni.catissueplus.core.administrative.domain.ForgotPasswordToken;
 import com.krishagni.catissueplus.core.administrative.domain.Institute;
 import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.administrative.domain.factory.UserErrorCode;
 import com.krishagni.catissueplus.core.administrative.domain.factory.UserFactory;
+import com.krishagni.catissueplus.core.administrative.events.AnnouncementDetail;
 import com.krishagni.catissueplus.core.administrative.events.InstituteDetail;
 import com.krishagni.catissueplus.core.administrative.events.PasswordDetails;
 import com.krishagni.catissueplus.core.administrative.events.UserDetail;
 import com.krishagni.catissueplus.core.administrative.repository.UserDao;
 import com.krishagni.catissueplus.core.administrative.repository.UserListCriteria;
 import com.krishagni.catissueplus.core.administrative.services.UserService;
+import com.krishagni.catissueplus.core.auth.domain.AuthDomain;
 import com.krishagni.catissueplus.core.biospecimen.repository.DaoFactory;
 import com.krishagni.catissueplus.core.common.PlusTransactional;
 import com.krishagni.catissueplus.core.common.access.AccessCtrlMgr;
@@ -33,11 +41,15 @@ import com.krishagni.catissueplus.core.common.events.UserSummary;
 import com.krishagni.catissueplus.core.common.service.EmailService;
 import com.krishagni.catissueplus.core.common.util.AuthUtil;
 import com.krishagni.catissueplus.core.common.util.ConfigUtil;
+import com.krishagni.catissueplus.core.common.util.MessageUtil;
 import com.krishagni.catissueplus.core.common.util.Status;
+import com.krishagni.catissueplus.core.common.util.Utility;
 import com.krishagni.rbac.events.SubjectRoleDetail;
 import com.krishagni.rbac.service.RbacService;
 
 public class UserServiceImpl implements UserService {
+	private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+
 	private static final String DEFAULT_AUTH_DOMAIN = "openspecimen";
 	
 	private static final String FORGOT_PASSWORD_EMAIL_TMPL = "users_forgot_password_link"; 
@@ -51,7 +63,13 @@ public class UserServiceImpl implements UserService {
 	private static final String USER_REQUEST_REJECTED_TMPL = "users_request_rejected";
 	
 	private static final String USER_CREATED_EMAIL_TMPL = "users_created";
-	
+
+	private static final String ANNOUNCEMENT_EMAIL_TMPL = "announcement_email";
+
+	private static final String ADMIN_MOD = "administrative";
+
+	private static final String ACTIVE_USER_LOGIN_DAYS_CFG = "active_users_login_days";
+
 	private DaoFactory daoFactory;
 
 	private UserFactory userFactory;
@@ -79,18 +97,58 @@ public class UserServiceImpl implements UserService {
 	@Override
 	@PlusTransactional
 	public ResponseEvent<List<UserSummary>> getUsers(RequestEvent<UserListCriteria> req) {
-		UserListCriteria crit = req.getPayload();		
-		if (!AuthUtil.isAdmin() && !crit.listAll()) {
-			crit.instituteName(getCurrUserInstitute().getName());
-		} 
-		
-		List<UserSummary> users = daoFactory.getUserDao().getUsers(crit);
+		List<UserSummary> users = daoFactory.getUserDao().getUsers(addUserListCriteria(req.getPayload()));
 		return ResponseEvent.response(users);
 	}
 	
 	@Override
-	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+	@PlusTransactional
+	public ResponseEvent<Long> getUsersCount(RequestEvent<UserListCriteria> req) {
+		return ResponseEvent.response(daoFactory.getUserDao().getUsersCount(addUserListCriteria(req.getPayload())));
+	}
+
+	@Override
+	public UserDetails loadUserByUsername(String username)
+	throws UsernameNotFoundException {
 		return daoFactory.getUserDao().getUser(username, DEFAULT_AUTH_DOMAIN);
+	}
+	
+	@Override
+	@PlusTransactional
+	public Object loadUserBySAML(SAMLCredential credential)
+	throws UsernameNotFoundException {
+		if (logger.isDebugEnabled()) {
+			for (Attribute attr : credential.getAttributes()) {
+				logger.debug(String.format(
+					"Credential attr: %s (%s) = %s",
+					attr.getName(), attr.getFriendlyName(), credential.getAttributeAsString(attr.getName())));
+			}
+		}
+
+		//
+		// The assumption is - there can be only one SAML auth provider
+		// We should perhaps use SAML local entity ID
+		//
+		AuthDomain domain = daoFactory.getAuthDao().getAuthDomainByType("saml");
+
+		Map<String, String> props = domain.getAuthProvider().getProps();
+		String loginNameAttr = props.get("loginNameAttr");
+		String emailAttr     = props.get("emailAddressAttr");
+		
+		User user = null;
+		if (StringUtils.isNotBlank(loginNameAttr)) {
+			String loginName = getCredentialAttrValue(credential, loginNameAttr);
+			user = daoFactory.getUserDao().getUser(loginName, domain.getName());
+		} else if (StringUtils.isNotBlank(emailAttr)) {
+			String email = getCredentialAttrValue(credential, emailAttr);
+			user = daoFactory.getUserDao().getUserByEmailAddress(email);
+		}
+		
+		if (user == null) {
+			throw new UsernameNotFoundException(MessageUtil.getInstance().getMessage("user_not_found"));
+		}
+		
+		return user;
 	}
 
 	@Override
@@ -115,8 +173,10 @@ public class UserServiceImpl implements UserService {
 				detail.setActivityStatus(Status.ACTIVITY_STATUS_PENDING.getStatus());
 			}
 			
-			User user = userFactory.createUser(detail);			
+			User user = userFactory.createUser(detail);
+
 			if (!isSignupReq) {
+				resetAttrs(user);
 				AccessCtrlMgr.getInstance().ensureCreateUserRights(user);
 			}
 		
@@ -124,7 +184,7 @@ public class UserServiceImpl implements UserService {
 			ensureUniqueLoginNameInDomain(user.getLoginName(), user.getAuthDomain().getName(), ose);
 			ensureUniqueEmailAddress(user.getEmailAddress(), ose);
 			ose.checkAndThrow();
-		
+
 			daoFactory.getUserDao().saveOrUpdate(user);
 			if (isSignupReq) {
 				sendUserSignupEmail(user);
@@ -354,6 +414,38 @@ public class UserServiceImpl implements UserService {
 		return ResponseEvent.response(InstituteDetail.from(institute));
 	}
 
+	private UserListCriteria addUserListCriteria(UserListCriteria crit) {
+		if (!AuthUtil.isAdmin() && !crit.listAll()) {
+			crit.instituteName(getCurrUserInstitute().getName());
+		}
+
+		return crit;
+	}
+
+	@Override
+	@PlusTransactional
+	public ResponseEvent<Boolean> broadcastAnnouncement(RequestEvent<AnnouncementDetail> req) {
+		try {
+			AccessCtrlMgr.getInstance().ensureUserIsAdmin();
+
+			AnnouncementDetail detail = req.getPayload();
+			OpenSpecimenException ose = new OpenSpecimenException(ErrorType.USER_ERROR);
+			ensureValidAnnouncement(detail, ose);
+			ose.checkAndThrow();
+
+			//
+			// For now announcements are broadcast using emails.
+			// Later we can broadcast using SMS, WhatsApp, Facebook, Twitter, and anything
+			//
+			emailAnnouncements(detail, getActiveUsers());
+			return ResponseEvent.response(true);
+		} catch(OpenSpecimenException ose){
+			return ResponseEvent.error(ose);
+		} catch(Exception e) {
+			return ResponseEvent.serverError(e);
+		}
+	}
+
 	private ResponseEvent<UserDetail> updateUser(RequestEvent<UserDetail> req, boolean partial) {
 		try {
 			UserDetail detail = req.getPayload();
@@ -379,10 +471,12 @@ public class UserServiceImpl implements UserService {
 			} else {
 				user = userFactory.createUser(detail);
 			}
-			
+			resetAttrs(existingUser, user);
+
 			AccessCtrlMgr.getInstance().ensureUpdateUserRights(user);
 			
 			OpenSpecimenException ose = new OpenSpecimenException(ErrorType.USER_ERROR);
+
 			ensureUniqueEmail(existingUser, user, ose);
 			ensureUniqueLoginName(existingUser, user, ose);
 			ose.checkAndThrow();
@@ -441,6 +535,23 @@ public class UserServiceImpl implements UserService {
 		props.put("user", user);
 		
 		emailService.sendEmail(USER_REQUEST_REJECTED_TMPL, new String[]{user.getEmailAddress()}, props);
+	}
+	
+	private void resetAttrs(User newUser) {
+		resetAttrs(null, newUser);
+	}
+	
+	private void resetAttrs(User existingUser, User newUser) {
+		if (AuthUtil.isAdmin()) {
+			return;
+		}
+
+		//
+		// Only super admin can update these attributes; therefore reset to
+		// their earlier value or default value
+		//
+		newUser.setAdmin(existingUser != null ? existingUser.isAdmin() : false);
+		newUser.setManageForms(existingUser != null ? existingUser.canManageForms() : false);
 	}
 	
 	private void ensureUniqueEmail(User existingUser, User newUser, OpenSpecimenException ose) {
@@ -505,4 +616,52 @@ public class UserServiceImpl implements UserService {
 		return token;
 	}
 
+	private String getCredentialAttrValue(SAMLCredential credential, String attrName) {
+		Attribute attr = credential.getAttributes().stream()
+			.filter(a -> attrName.equals(a.getName()) || attrName.equals(a.getFriendlyName()))
+			.findFirst().orElse(null);
+
+		if (attr == null) {
+			return null;
+		}
+
+		return credential.getAttributeAsString(attr.getName());
+	}
+
+	private void ensureValidAnnouncement(AnnouncementDetail detail, OpenSpecimenException ose) {
+		if (StringUtils.isBlank(detail.getSubject())) {
+			ose.addError(UserErrorCode.ANN_SUBJECT_REQ);
+		}
+
+		if (StringUtils.isBlank(detail.getMessage())) {
+			ose.addError(UserErrorCode.ANN_MESSAGE_REQ);
+		}
+	}
+
+	private List<User> getActiveUsers() {
+		Date today = Calendar.getInstance().getTime();
+		return daoFactory.getUserDao().getActiveUsers(getActiveUserLastLoginCutoff(today), today);
+	}
+
+	private Date getActiveUserLastLoginCutoff(Date present) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(present);
+		cal.add(Calendar.DAY_OF_YEAR, -getActiveUserCfgDays());
+		return Utility.chopTime(cal.getTime());
+	}
+
+	private int getActiveUserCfgDays() {
+		return ConfigUtil.getInstance().getIntSetting(ADMIN_MOD, ACTIVE_USER_LOGIN_DAYS_CFG, 90);
+	}
+
+	private void emailAnnouncements(AnnouncementDetail detail, List<User> users) {
+		String[] adminEmailAddr = {ConfigUtil.getInstance().getAdminEmailId()};
+		String[] rcpts = users.stream().map(User::getEmailAddress).toArray(String[]::new);
+
+		Map<String, Object> props = new HashMap<>();
+		props.put("user", AuthUtil.getCurrentUser());
+		props.put("$subject", new String[] { detail.getSubject() });
+		props.put("annDetail", detail);
+		emailService.sendEmail(ANNOUNCEMENT_EMAIL_TMPL, adminEmailAddr, rcpts, null, props);
+	}
 }

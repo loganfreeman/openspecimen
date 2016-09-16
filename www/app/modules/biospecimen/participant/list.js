@@ -2,16 +2,25 @@
 angular.module('os.biospecimen.participant.list', ['os.biospecimen.models'])
   .controller('ParticipantListCtrl', function(
     $scope, $state, $stateParams, $modal, $q, osRightDrawerSvc,
-    cp, CollectionProtocolRegistration, Util) {
+    cp, CollectionProtocolRegistration, Util, ListPagerOpts) {
+
+    var pagerOpts, filterOpts;
 
     function init() {
       $scope.cpId = $stateParams.cpId;
       $scope.cp = cp;
-      $scope.filterOpts = {};
+      pagerOpts  = $scope.pagerOpts = new ListPagerOpts({listSizeGetter: getCprCount});
+      filterOpts = $scope.filterOpts = {maxResults: ListPagerOpts.MAX_PAGE_RECS + 1};
 
       $scope.participantResource = {
         registerOpts: {resource: 'ParticipantPhi', operations: ['Create'], cp: $scope.cp.shortTitle},
       }
+
+      angular.extend($scope.listViewCtx, {
+        listName: 'participant.list',
+        headerButtonsTmpl: 'modules/biospecimen/participant/register-button.html',
+        showSearch: true
+      });
 
       loadParticipants();
       Util.filter($scope, 'filterOpts', loadParticipants);
@@ -28,8 +37,13 @@ angular.module('os.biospecimen.participant.list', ['os.biospecimen.models'])
           }
 
           $scope.cprList = cprList;
+          pagerOpts.refreshOpts(cprList);
         }
       )
+    }
+
+    function getCprCount() {
+      return CollectionProtocolRegistration.getCprCount($scope.cpId, true, filterOpts);
     }
 
     $scope.clearFilters = function() {

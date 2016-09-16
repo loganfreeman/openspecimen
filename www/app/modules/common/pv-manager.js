@@ -72,11 +72,16 @@ angular.module('openspecimen')
       'Unacceptable'
     ];
 
+    var visitNamePrintModes = [
+      {name: 'PRE_PRINT', displayKey:'cp.visit_name_print_modes.PRE_PRINT'},
+      {name: 'ON_COMPLETION', displayKey:'cp.visit_name_print_modes.ON_COMPLETION'},
+      {name: 'NONE', displayKey:'cp.visit_name_print_modes.NONE'}
+    ];
+
     var spmnLabelPrePrintModes = [
       {name: 'ON_VISIT', displayKey:'cp.spmn_label_pre_print_modes.ON_VISIT'},
       {name: 'NONE', displayKey:'cp.spmn_label_pre_print_modes.NONE'}
     ];
-
 
     var spmnLabelAutoPrintModes = [
       {name: 'PRE_PRINT', displayKey:'srs.spmn_label_auto_print_modes.PRE_PRINT'},
@@ -92,27 +97,26 @@ angular.module('openspecimen')
       'container-position-labeling-schemes': positionLabelingSchemes,
       'activity-status': activityStatuses,
       'quality-status': qualityStatuses,
+      'visit-name-print-modes': visitNamePrintModes,
       'specimen-label-pre-print-modes': spmnLabelPrePrintModes,
       'specimen-label-auto-print-modes': spmnLabelAutoPrintModes
     };
 
     var pvIdMap = {
-      'clinical-status'     : '2003988',
-      'gender'              : '2003989',
-      'genotype'            : '2003990',
-      'specimen-class'      : '2003991',
-      'laterality'          : '2003992',
-      'pathology-status'    : '2003993',
-      'collection-procedure': '2003996',
-      'collection-container': '2003997',
-      'vital-status'        : '2004001',
-      'received-quality'    : '2003994',
-
-      'ethnicity'           : 'Ethnicity_PID',
-      'race'                : 'Race_PID',
-      'anatomic-site'       : 'Tissue_Site_PID',
-      'site-type'           : 'Site_Type_PID',
-      'clinical-diagnosis'  : 'Clinical_Diagnosis_PID',
+      'clinical-status'     : 'clinical_status',
+      'gender'              : 'gender',
+      'specimen-class'      : 'specimen_type',
+      'laterality'          : 'laterality',
+      'pathology-status'    : 'pathology_status',
+      'collection-procedure': 'collection_procedure',
+      'collection-container': 'collection_container',
+      'vital-status'        : 'vital_status',
+      'received-quality'    : 'received_quality',
+      'ethnicity'           : 'ethnicity',
+      'race'                : 'race',
+      'anatomic-site'       : 'anatomic_site',
+      'site-type'           : 'site_type',
+      'clinical-diagnosis'  : 'clinical_diagnosis',
       'specimen-biohazard'  : 'specimen_biohazard',
       'consent_response'    : 'consent_response',
       'missed-visit-reason' : 'missed_visit_reason',
@@ -163,7 +167,8 @@ angular.module('openspecimen')
       var params = {
         parentAttribute: pvId, 
         parentValue: parentVal,  
-        includeParentValue: incParentVal
+        includeParentValue: incParentVal,
+        maxResults: 100
       };
 
       return $http.get(url, {params: params}).then(

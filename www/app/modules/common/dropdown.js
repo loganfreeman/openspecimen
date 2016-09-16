@@ -28,7 +28,7 @@ angular.module('openspecimen')
           .attr('ng-model', tAttrs.ngModel)
           .attr('ng-disabled', tAttrs.ngDisabled)
           .attr('reset-search-input', true)
-          .attr('append-to-body', !!tAttrs.appendToBody)
+          .attr('append-to-body', tAttrs.appendToBody == true)
           .attr('os-tabable', !!tAttrs.osTabable);
     
         if (tAttrs.onSelect) {
@@ -55,6 +55,11 @@ angular.module('openspecimen')
         } else {
           uiSelectChoices.attr('repeat', "item in " + tAttrs.list + " | filter: $select.search");
         }
+
+        if (tAttrs.groupBy) {
+          uiSelectChoices.attr('group-by', tAttrs.groupBy);
+        }
+
         uiSelectChoices.append('<span ng-bind-html="' + searchItem + ' | highlight: $select.search"></span>');
 
         if (multiple) {
@@ -71,7 +76,7 @@ angular.module('openspecimen')
         }
             
         uiSelect.append(uiSelectMatch).append(uiSelectChoices);
-        
+
         var selectContainer = angular.element("<div/>")
           .addClass("os-select-container")
           .append(uiSelect);

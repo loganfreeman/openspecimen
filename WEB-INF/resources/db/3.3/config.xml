@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+  <changeSet author="vlonushte" id="Specifiy directory to store collection protocol SOP documents">
+    <sql>
+      call add_cfg_prop(
+        'biospecimen', 'cp_sop_doc_dir',
+        'cp_sop_doc_dir', 'cp_sop_doc_dir_desc',
+        'STRING', ''
+      );
+    </sql>
+  </changeSet>
+
+  <changeSet author="pjoshi" id="Number of days of last login before user is considered as inactive">
+    <sql>
+      call add_cfg_prop(
+        'administrative', 'active_users_login_days',
+        'active_users_login_days', 'active_users_login_days_desc',
+        'INT', '90'
+      );
+    </sql>
+  </changeSet>
+	
+  <changeSet author="vgaikwad" id="Remove specimen type and pathology status abbreviation file path configuration properties">
+    <sql>
+      call remove_cfg_prop('biospecimen', 'specimen_type_abbr_map');
+
+      call remove_cfg_prop('biospecimen', 'spmn_path_status_abbr_map');
+    </sql>
+  </changeSet>
+
+  <changeSet author="vlonushte" id="System level CP SOP document URL">
+    <sql>
+      call add_cfg_prop(
+        'biospecimen', 'cp_sop_doc_url',
+        'cp_sop_doc_url', 'cp_sop_doc_url_desc',
+        'STRING', ''
+      );
+    </sql>
+  </changeSet>
+
+  <changeSet author="vlonushte" id="System level CP SOP document">
+    <sql>
+      call add_cfg_prop(
+        'biospecimen', 'cp_sop_doc',
+        'cp_sop_doc', 'cp_sop_doc_desc',
+        'FILE', ''
+      );
+    </sql>
+  </changeSet>
+</databaseChangeLog>

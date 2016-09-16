@@ -1,6 +1,7 @@
 
 package com.krishagni.catissueplus.core.administrative.repository;
 
+import java.util.Date;
 import java.util.List;
 
 import com.krishagni.catissueplus.core.administrative.domain.ForgotPasswordToken;
@@ -11,6 +12,8 @@ import com.krishagni.catissueplus.core.common.repository.Dao;
 
 public interface UserDao extends Dao<User> {
 	public List<UserSummary> getUsers(UserListCriteria criteria);
+	
+	public Long getUsersCount(UserListCriteria criteria);
 	
 	public List<User> getUsersByIds(List<Long> userIds);
 	
@@ -36,4 +39,5 @@ public interface UserDao extends Dao<User> {
 	
 	public void deleteFpToken(ForgotPasswordToken token);
 
+	public List<User> getActiveUsers(Date startDate, Date endDate);
 }

@@ -1,6 +1,8 @@
 angular.module('openspecimen')
-  .factory('AuthorizationService', function($rootScope, $http, User, ApiUtil, ApiUrls) {
+  .factory('AuthorizationService', function($http, User, ApiUtil, ApiUrls) {
     var userRights = [];
+
+    var currentUser = {};
 
     function isAllowed(allowedOps, requestedOps) {
       var allowed = false;
@@ -14,7 +16,9 @@ angular.module('openspecimen')
     }
 
     return {
-      initializeUserRights: function() {
+      initializeUserRights: function(user) {
+        currentUser = user;
+
         return User.getCurrentUserRoles().then(
           function(userRoles) {
             userRights = [];
@@ -36,7 +40,7 @@ angular.module('openspecimen')
       },
 
       isAllowed: function(opts) {
-        if ($rootScope.currentUser.admin) {
+        if (currentUser.admin) {
           return true;
         }
 
@@ -63,6 +67,16 @@ angular.module('openspecimen')
         }
 
         return allowed;
+      },
+
+      hasPhiAccess: function() {
+        for (var i = 0; i < userRights.length; i++) {
+          if (userRights[i].resource == 'ParticipantPhi') {
+            return true;
+          }
+        }
+
+        return false;
       }
     }
   });

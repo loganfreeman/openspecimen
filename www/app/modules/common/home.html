@@ -82,7 +82,7 @@
       </a>
     </li>
     <li class="os-home-item">
-      <a ui-sref="specimen-list">
+      <a ui-sref="specimen-lists">
         <span class="os-home-item-icon">
           <span class="fa fa-shopping-cart"></span>
         </span>
@@ -92,7 +92,7 @@
         </span>
       </a>
     </li>
-    <li show-if-admin class="os-home-item"> 
+    <li ng-if="currentUser.admin || currentUser.manageForms" class="os-home-item">
       <a ui-sref="form-list">
         <span class="os-home-item-icon">
           <span class="fa fa-copy"></span>
@@ -153,7 +153,7 @@
       </a>
     </li>
     <li class="os-home-item">
-      <a href="{{homeCtx.trainingUrl}}" target="_blank">
+      <a href="{{userCtx.trainingUrl}}" target="_blank">
         <span class="os-home-item-icon">
           <span class="fa fa-graduation-cap"></span>
         </span>

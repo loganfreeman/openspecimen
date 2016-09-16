@@ -69,6 +69,18 @@
   padding: 0px 4px;
 }
 
+.fa.os-status-part-distributed:before {
+  color: transparent;
+}
+
+.fa.os-status-part-distributed {
+  width: 0.85em;
+  height: 0.85em;
+  background: linear-gradient(to right, #5cb85c, #5cb85c 50%, #5bc0de 50%, #5bc0de);
+  border-radius: 50%;
+  margin: 0px 4px;
+}
+
 .fa.os-status-returned:before {
   color: #b37cc6;
   padding: 0px 4px;
@@ -124,6 +136,7 @@
 .os-key-values .value.os-status-shipped,
 .os-key-values .value.os-status-received,
 .os-key-values .value.os-status-distributed,
+.os-key-values .value.os-status-part-distributed,
 .os-key-values .value.os-status-returned {
   width: initial!important;
   border-radius: 4px;
@@ -149,6 +162,10 @@
 
 .os-key-values .value.os-status-distributed {
   background: #5bc0de;
+}
+
+.os-key-values .value.os-status-part-distributed {
+  background: linear-gradient(to right, #5cb85c, #5cb85c 50%, #5bc0de 50%, #5bc0de);
 }
 
 .os-key-values .value.os-status-returned {
@@ -226,27 +243,9 @@
 }
 
 .os-md-time .os-time-no-wheels tr:nth-child(2) td:nth-child(2) {
-  padding-top: 10px;
-}
-
-.os-spmn-coll-detail label {
-  color: #666;
-}
-
-.os-spmn-coll-detail .input {
-  margin-top: -17px;
-}
-
-.os-spmn-coll-detail .form-group {
-  margin-bottom: 30px;
-}
-
-.os-spmn-coll-detail .os-md-input.read {
-  margin-top: 7px;
-}
-
-.os-spmn-coll-detail .input, .os-spmn-coll-detail .read {
-  padding-left: 0px;
+  padding-top: 15px;
+  border: 0px;
+  box-shadow: none;
 }
 
 .os-text-checkbox:after {

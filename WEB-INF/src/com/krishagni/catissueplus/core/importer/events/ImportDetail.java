@@ -3,6 +3,8 @@ package com.krishagni.catissueplus.core.importer.events;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.krishagni.catissueplus.core.importer.services.ImportListener;
+
 public class ImportDetail {
 	private String objectType;
 	
@@ -11,8 +13,10 @@ public class ImportDetail {
 	private String csvType;
 	
 	private String inputFileId;
+
+	private ImportListener listener;
 	
-	private Map<String, Object> objectParams = new HashMap<String, Object>();
+	private Map<String, String> objectParams = new HashMap<>();
 
 	public String getObjectType() {
 		return objectType;
@@ -46,11 +50,19 @@ public class ImportDetail {
 		this.inputFileId = inputFileId;
 	}
 
-	public Map<String, Object> getObjectParams() {
+	public Map<String, String> getObjectParams() {
 		return objectParams;
 	}
 
-	public void setObjectParams(Map<String, Object> objectParams) {
+	public void setObjectParams(Map<String, String> objectParams) {
 		this.objectParams = objectParams;
+	}
+
+	public ImportListener getListener() {
+		return listener;
+	}
+
+	public void setListener(ImportListener listener) {
+		this.listener = listener;
 	}
 }

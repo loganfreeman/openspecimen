@@ -1,6 +1,7 @@
 package com.krishagni.catissueplus.core.biospecimen.domain.factory.impl;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 
@@ -13,7 +14,7 @@ import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
 import com.krishagni.catissueplus.core.biospecimen.domain.SpecimenList;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.SpecimenListErrorCode;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.SpecimenListFactory;
-import com.krishagni.catissueplus.core.biospecimen.events.SpecimenDetail;
+import com.krishagni.catissueplus.core.biospecimen.events.SpecimenInfo;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenListDetails;
 import com.krishagni.catissueplus.core.biospecimen.repository.DaoFactory;
 import com.krishagni.catissueplus.core.biospecimen.repository.SpecimenListCriteria;
@@ -61,6 +62,8 @@ public class SpecimenListFactoryImpl implements SpecimenListFactory {
 		specimenList.setOwner(user);
 		specimenList.setName(SpecimenList.getDefaultListName(user));
 		specimenList.setDescription(MessageUtil.getInstance().getMessage("specimen_list_default_user_list"));
+		specimenList.setCreatedOn(Calendar.getInstance().getTime());
+		specimenList.setLastUpdatedOn(specimenList.getCreatedOn());
 		return specimenList;
 	}
 
@@ -74,6 +77,9 @@ public class SpecimenListFactoryImpl implements SpecimenListFactory {
 		setDescription(details, specimenList, partial, ose);
 		setSpecimens(details, specimenList, partial, ose);
 		setSharedUsers(details, specimenList, partial, ose);
+
+		specimenList.setCreatedOn(Calendar.getInstance().getTime());
+		specimenList.setLastUpdatedOn(specimenList.getCreatedOn());
 	}
     
 	private void setOwner(SpecimenListDetails details, SpecimenList specimenList, boolean partial, OpenSpecimenException ose) {
@@ -115,7 +121,7 @@ public class SpecimenListFactoryImpl implements SpecimenListFactory {
 
 		specimenList.setDescription(details.getDescription());
 	}
-    
+
 	private void setSpecimens(SpecimenListDetails details, SpecimenList specimenList, boolean partial, OpenSpecimenException ose) {
 		if (partial && !details.isAttrModified("specimens")) {
 			return;
@@ -123,7 +129,7 @@ public class SpecimenListFactoryImpl implements SpecimenListFactory {
 		
 		List<String> labels = new ArrayList<String>();
 		if (!CollectionUtils.isEmpty(details.getSpecimens())) {
-			for (SpecimenDetail specimen : details.getSpecimens()) {
+			for (SpecimenInfo specimen : details.getSpecimens()) {
 				labels.add(specimen.getLabel());
 			}
 		}

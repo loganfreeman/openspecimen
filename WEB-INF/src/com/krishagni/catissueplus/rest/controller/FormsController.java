@@ -33,7 +33,6 @@ import com.krishagni.catissueplus.core.de.events.FormFieldSummary;
 import com.krishagni.catissueplus.core.de.events.FormRecordCriteria;
 import com.krishagni.catissueplus.core.de.events.FormRecordsList;
 import com.krishagni.catissueplus.core.de.events.FormSummary;
-import com.krishagni.catissueplus.core.de.events.FormType;
 import com.krishagni.catissueplus.core.de.events.GetFormFieldPvsOp;
 import com.krishagni.catissueplus.core.de.events.GetFormRecordsListOp;
 import com.krishagni.catissueplus.core.de.events.ListFormFields;
@@ -84,7 +83,23 @@ public class FormsController {
 		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}
-	
+
+	@RequestMapping(method = RequestMethod.GET, value = "/count")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public Map<String, Long> getFormsCount(
+			@RequestParam(value = "name", required= false, defaultValue = "")
+			String name) {
+		
+		FormListCriteria crit = new FormListCriteria()
+				.query(name)
+				.formType("DataEntry");
+		
+		ResponseEvent<Long> resp = formSvc.getFormsCount(getRequest(crit));
+		resp.throwErrorIfUnsuccessful();
+		return Collections.singletonMap("count", resp.getPayload());
+	}
+
 	@RequestMapping(method = RequestMethod.DELETE, value="{id}")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
@@ -231,7 +246,7 @@ public class FormsController {
 		RemoveFormContextOp op = new RemoveFormContextOp();
 		op.setCpId(cpId);
 		op.setFormId(formId);
-		op.setFormType(FormType.fromType(entityType));
+		op.setEntityType(entityType);
 		op.setRemoveType(RemoveType.SOFT_REMOVE);
 
 		ResponseEvent<Boolean> resp = formSvc.removeFormContext(getRequest(op));
@@ -335,11 +350,45 @@ public class FormsController {
 			String searchStr,
 			
 			@RequestParam(value = "maxResults", required = false, defaultValue = "100")
-			int maxResults
-			) {
+			int maxResults) {
 
 		GetFormFieldPvsOp op = new GetFormFieldPvsOp();
 		op.setFormId(formId);
+		op.setControlName(controlName);
+		op.setUseUdn(useUdn);
+		op.setSearchString(searchStr);
+		op.setMaxResults(maxResults);
+
+		ResponseEvent<List<PermissibleValue>> resp = formSvc.getPvs(getRequest(op));
+		resp.throwErrorIfUnsuccessful();
+		return resp.getPayload();
+	}
+
+	@RequestMapping(method = RequestMethod.GET, value="/permissible-values")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public List<PermissibleValue> getFieldPvs(
+			@RequestParam(value = "formId", required = false)
+			Long formId,
+
+			@RequestParam(value = "formName", required = false)
+			String formName,
+
+			@RequestParam(value = "controlName", required = true)
+			String controlName,
+
+			@RequestParam(value = "useUdn", required = false, defaultValue = "false")
+			boolean useUdn,
+
+			@RequestParam(value = "searchString", required = false, defaultValue = "")
+			String searchStr,
+
+			@RequestParam(value = "maxResults", required = false, defaultValue = "100")
+			int maxResults) {
+
+		GetFormFieldPvsOp op = new GetFormFieldPvsOp();
+		op.setFormId(formId);
+		op.setFormName(formName);
 		op.setControlName(controlName);
 		op.setUseUdn(useUdn);
 		op.setSearchString(searchStr);

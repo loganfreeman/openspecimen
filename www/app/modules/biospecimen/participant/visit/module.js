@@ -42,8 +42,8 @@ angular.module('os.biospecimen.visit', [
           );
         },
         resolve: {
-          extensionCtxt: function(Visit) {
-            return Visit.getExtensionCtxt();
+          extensionCtxt: function(cp, Visit) {
+            return Visit.getExtensionCtxt({cpId: cp.id});
           }
         },
         controller: 'AddEditVisitCtrl',
@@ -70,8 +70,12 @@ angular.module('os.biospecimen.visit', [
             }
           );
         },
-        controller: function() {
-          // 'ParticipantOverviewCtrl',
+        controller: function($scope, ExtensionsUtil) {
+          ExtensionsUtil.createExtensionFieldMap($scope.visit);
+          $scope.visitCtx = {
+            obj: {visit: $scope.visit},
+            inObjs: ['visit']
+          }
         },
         parent: 'visit-detail'
       })

@@ -61,8 +61,8 @@ angular.module('os.biospecimen.specimen',
           );
         },
         resolve: {
-          extensionCtxt: function(specimen) {
-            return specimen.getExtensionCtxt();
+          extensionCtxt: function(cp, specimen) {
+            return specimen.getExtensionCtxt({cpId: cp.id});
           }
         },
         controller: 'AddEditSpecimenCtrl',
@@ -165,8 +165,8 @@ angular.module('os.biospecimen.specimen',
           );
         },
         resolve: {
-          extensionCtxt: function(Specimen) {
-            return Specimen.getExtensionCtxt({"lineage": "Derived"});
+          extensionCtxt: function(cp, Specimen) {
+            return Specimen.getExtensionCtxt({cpId: cp.id});
           }
         },
         controller: 'AddDerivativeCtrl',
@@ -183,12 +183,38 @@ angular.module('os.biospecimen.specimen',
           );
         },
         resolve: {
-          extensionCtxt: function(Specimen) {
-            return Specimen.getExtensionCtxt();
+          extensionCtxt: function(cp, Specimen) {
+            return Specimen.getExtensionCtxt({cpId: cp.id});
           }
         },
         controller: 'AddAliquotsCtrl',
         parent: 'specimen-root'
+      })
+      .state('specimen-bulk-create-aliquots', {
+        url: '/bulk-create-aliquots',
+        templateUrl: 'modules/biospecimen/participant/specimen/bulk-create-aliquots.html',
+        controller: 'BulkCreateAliquotsCtrl',
+        resolve: {
+          parentSpmns: function(SpecimensHolder) {
+            var specimens = SpecimensHolder.getSpecimens();
+            SpecimensHolder.setSpecimens([]);
+            return specimens || [];
+          }
+        },
+        parent: 'signed-in'
+      })
+      .state('specimen-bulk-create-derivatives', {
+        url: '/bulk-create-derivatives',
+        templateUrl: 'modules/biospecimen/participant/specimen/bulk-create-derivatives.html',
+        controller: 'BulkCreateDerivativesCtrl',
+        resolve: {
+          parentSpmns: function(SpecimensHolder) {
+            var specimens = SpecimensHolder.getSpecimens();
+            SpecimensHolder.setSpecimens([]);
+            return specimens || [];
+          }
+        },
+        parent: 'signed-in'
       })
       .state('bulk-add-event', {
         url: '/bulk-add-event',

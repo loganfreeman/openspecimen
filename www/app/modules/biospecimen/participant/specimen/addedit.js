@@ -1,36 +1,14 @@
 
 angular.module('os.biospecimen.specimen.addedit', [])
   .controller('AddEditSpecimenCtrl', function(
-    $scope, $state, cpr, visit, specimen, extensionCtxt, 
+    $scope, $state, cpr, visit, specimen, extensionCtxt, hasDict,
     PvManager, Util, ExtensionsUtil) {
 
     function loadPvs() {
-      $scope.loadSpecimenTypes = function(specimenClass, notclear) {
-        $scope.specimenTypes = PvManager.getPvsByParent('specimen-class', specimenClass);
-        if (!notclear) {
-          $scope.currSpecimen.type = '';
-        }
-      };
-
-      $scope.collectionStatuses = PvManager.getPvs('specimen-status');
-      $scope.specimenClasses = PvManager.getPvs('specimen-class');
-      if (!!specimen.specimenClass) {
-        $scope.loadSpecimenTypes(specimen.specimenClass, true);
-      }
-      $scope.lateralities = PvManager.getPvs('laterality');
-      $scope.pathologyStatuses = PvManager.getPvs('pathology-status');
       $scope.biohazards = PvManager.getPvs('specimen-biohazard');
-
-      if (!specimen.id && !specimen.reqId) {
-        $scope.collectionProcedures = PvManager.getPvs('collection-procedure');
-        $scope.collectionContainers = PvManager.getPvs('collection-container');
-        $scope.receivedQualities =  PvManager.getPvs('received-quality');
-      }      
     };
 
     function init() {
-      loadPvs();
-
       var currSpecimen = $scope.currSpecimen = angular.copy(specimen);
       delete currSpecimen.children;
 
@@ -63,6 +41,7 @@ angular.module('os.biospecimen.specimen.addedit', [])
         }
       }
 
+      var exObjs = ['specimen.lineage', 'specimen.parentLabel', 'specimen.events'];
       if (!$scope.currSpecimen.id && !$scope.currSpecimen.reqId) {
         var currentDate = new Date();
         $scope.currSpecimen.collectionEvent = {
@@ -78,14 +57,24 @@ angular.module('os.biospecimen.specimen.addedit', [])
         $scope.currSpecimen.collectionEvent.container = "Not Specified";
         $scope.currSpecimen.collectionEvent.procedure = "Not Specified";
         $scope.currSpecimen.receivedEvent.receivedQuality = "Acceptable";
+      } else {
+        exObjs.push('specimen.collectionEvent', 'specimen.receivedEvent');
       }
 
       $scope.currSpecimen.initialQty = Util.getNumberInScientificNotation($scope.currSpecimen.initialQty);
       $scope.currSpecimen.availableQty = Util.getNumberInScientificNotation($scope.currSpecimen.availableQty);
       $scope.currSpecimen.concentration = Util.getNumberInScientificNotation($scope.currSpecimen.concentration);
 
+      $scope.spmnCtx = {
+        obj: {specimen: $scope.currSpecimen}, inObjs: ['specimen'], exObjs: exObjs
+      }
+
       $scope.deFormCtrl = {};
       $scope.extnOpts = ExtensionsUtil.getExtnOpts(currSpecimen, extensionCtxt);
+
+      if (!hasDict) {
+        loadPvs();
+      }
     }
 
     $scope.saveSpecimen = function() {

@@ -14,7 +14,6 @@ import org.apache.commons.lang.StringUtils;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
-import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
@@ -25,7 +24,6 @@ import com.krishagni.catissueplus.core.administrative.repository.UserListCriteri
 import com.krishagni.catissueplus.core.common.events.DependentEntityDetail;
 import com.krishagni.catissueplus.core.common.events.UserSummary;
 import com.krishagni.catissueplus.core.common.repository.AbstractDao;
-import com.krishagni.catissueplus.core.common.util.Status;
 
 public class UserDaoImpl extends AbstractDao<User> implements UserDao {
 	
@@ -36,24 +34,23 @@ public class UserDaoImpl extends AbstractDao<User> implements UserDao {
 	
 	@SuppressWarnings("unchecked")
 	public List<UserSummary> getUsers(UserListCriteria listCrit) {
-		Criteria criteria = sessionFactory.getCurrentSession()
-				.createCriteria(User.class, "u")
-				.add( // not system user
-					Restrictions.not(Restrictions.conjunction()
-						.add(Restrictions.eq("u.loginName", User.SYS_USER))
-						.add(Restrictions.eq("u.authDomain.name", User.DEFAULT_AUTH_DOMAIN))
-					)
-				)
-				.setFirstResult(listCrit.startAt())
-				.setMaxResults(listCrit.maxResults())
-				.addOrder(Order.asc("u.lastName"))
-				.addOrder(Order.asc("u.firstName"));
+		Criteria query = getUsersListQuery(listCrit)
+			.setFirstResult(listCrit.startAt())
+			.setMaxResults(listCrit.maxResults())
+			.addOrder(Order.asc("u.lastName"))
+			.addOrder(Order.asc("u.firstName"));
 		
-		addSearchConditions(criteria, listCrit);
-		addProjectionFields(criteria);
-		return getUsers(criteria.list(), listCrit);
+		addProjectionFields(query);
+		return getUsers(query.list(), listCrit);
 	}
 	
+	public Long getUsersCount(UserListCriteria listCrit) {
+		Number count = (Number) getUsersListQuery(listCrit)
+			.setProjection(Projections.rowCount())
+			.uniqueResult();
+		return count.longValue();
+	}
+
 	public List<User> getUsersByIds(List<Long> userIds) {
 		return getUsersByIdsAndInstitute(userIds, null);
 	}
@@ -142,7 +139,29 @@ public class UserDaoImpl extends AbstractDao<User> implements UserDao {
 	public void deleteFpToken(ForgotPasswordToken token) {
 		sessionFactory.getCurrentSession().delete(token);
 	}
-	
+
+	private Criteria getUsersListQuery(UserListCriteria crit) {
+		Criteria criteria = sessionFactory.getCurrentSession()
+			.createCriteria(User.class, "u")
+			.add( // not system user
+				Restrictions.not(Restrictions.conjunction()
+					.add(Restrictions.eq("u.loginName", User.SYS_USER))
+					.add(Restrictions.eq("u.authDomain.name", User.DEFAULT_AUTH_DOMAIN))
+				)
+			);
+		
+		return addSearchConditions(criteria, crit);
+	}
+
+	@Override
+	public List<User> getActiveUsers(Date startDate, Date endDate) {
+		return sessionFactory.getCurrentSession()
+			.getNamedQuery(GET_ACTIVE_USERS)
+			.setTimestamp("startDate", startDate)
+			.setTimestamp("endDate", endDate)
+			.list();
+	}
+
 	private List<UserSummary> getUsers(List<Object[]> rows, UserListCriteria listCrit) {		
 		Map<Long, UserSummary> userSummaryMap = new HashMap<Long, UserSummary>();
 
@@ -208,7 +227,7 @@ public class UserDaoImpl extends AbstractDao<User> implements UserDao {
 				.list();
 	}
 	
-	private void addSearchConditions(Criteria criteria, UserListCriteria listCrit) {
+	private Criteria addSearchConditions(Criteria criteria, UserListCriteria listCrit) {
 		String searchString = listCrit.query();
 		
 		if (StringUtils.isBlank(searchString)) {
@@ -225,6 +244,7 @@ public class UserDaoImpl extends AbstractDao<User> implements UserDao {
 		
 		addActivityStatusRestriction(criteria, listCrit.activityStatus());
 		addInstituteRestriction(criteria, listCrit.instituteName());
+		return criteria;
 	}
 
 	private void addNameRestriction(Criteria criteria, String name) {
@@ -307,5 +327,5 @@ public class UserDaoImpl extends AbstractDao<User> implements UserDao {
 	
 	private static final String GET_FP_TOKEN = TOKEN_FQN + ".getFpToken";
 
+	private static final String GET_ACTIVE_USERS = FQN + ".getActiveUsers";
 }
-

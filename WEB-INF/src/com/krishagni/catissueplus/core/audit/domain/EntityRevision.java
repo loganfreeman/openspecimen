@@ -1,6 +1,7 @@
-package com.krishagni.catissueplus.core.audit;
+package com.krishagni.catissueplus.core.audit.domain;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.hibernate.envers.ModifiedEntityNames;
@@ -8,8 +9,10 @@ import org.hibernate.envers.RevisionEntity;
 import org.hibernate.envers.RevisionNumber;
 import org.hibernate.envers.RevisionTimestamp;
 
+import com.krishagni.catissueplus.core.audit.services.impl.EntityRevisionListenerImpl;
+
 @RevisionEntity(EntityRevisionListenerImpl.class)
-public class Revision {
+public class EntityRevision {
 	
 	@RevisionNumber
 	private long id;
@@ -20,7 +23,7 @@ public class Revision {
 	private Long userId;
 	
 	private String ipAddress;
-	
+
 	@ModifiedEntityNames
 	private Set<String> entityNames;
 

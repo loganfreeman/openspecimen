@@ -19,7 +19,8 @@ var osApp = angular.module('openspecimen', [
   'ui.autocomplete',
   'mgcrea.ngStrap.popover',
   'angular-loading-bar',
-  'pascalprecht.translate'
+  'pascalprecht.translate',
+  'chart.js'
   ]);
 
 osApp.config(function(
@@ -38,7 +39,7 @@ osApp.config(function(
     };
 
     $translatePartialLoaderProvider.addPart('modules');
-    $translateProvider.useSanitizeValueStrategy('escapeParameters');
+    $translateProvider.useSanitizeValueStrategy(null);
     $translateProvider.useLoader('$translatePartialLoader', {  
       urlTemplate: '{part}/i18n/{lang}.js',
       loadFailureHandler: 'i18nErrHandler'
@@ -52,6 +53,14 @@ osApp.config(function(
           $scope.alerts = Alerts.messages;
         }
       })
+      .state('alert-msg', {
+        url: '/alert?redirectTo&type&msg',
+        controller: function($state, $stateParams, Alerts) {
+          Alerts.add($stateParams.msg, $stateParams.type);
+          $state.go($stateParams.redirectTo || 'home');
+        },
+        parent: 'default'
+      })
       .state('signed-in', {
         abstract: true,
         templateUrl: 'modules/common/appmenu.html',
@@ -59,8 +68,8 @@ osApp.config(function(
           currentUser: function(User) {
             return User.getCurrentUser();
           },
-          authInit: function(AuthorizationService) {
-            return AuthorizationService.initializeUserRights();
+          authInit: function(currentUser, AuthorizationService) {
+            return AuthorizationService.initializeUserRights(currentUser);
           }
         },
         controller: 'SignedInCtrl'
@@ -213,7 +222,7 @@ osApp.config(function(
     }
   })
   .run(function(
-    $rootScope, $window, $document, $cookieStore, $q,  $state, $translate, $translatePartialLoader,
+    $rootScope, $window, $document, $http, $cookies, $q,  $state, $translate, $translatePartialLoader,
     LocationChangeListener, ApiUtil, Setting, PluginReg) {
 
     $document.on('click', '.dropdown-menu.dropdown-menu-form', function(e) {
@@ -221,7 +230,11 @@ osApp.config(function(
     });
 
     if ($window.localStorage['osAuthToken']) {
-      $cookieStore.put('osAuthToken', $window.localStorage['osAuthToken']);
+      $cookies['osAuthToken'] = $window.localStorage['osAuthToken'];
+      $rootScope.loggedIn = true;
+    } else if ($cookies['osAuthToken']) {
+      $window.localStorage['osAuthToken'] = $cookies['osAuthToken'];
+      $http.defaults.headers.common['X-OS-API-TOKEN'] = $cookies['osAuthToken'];
       $rootScope.loggedIn = true;
     }
 

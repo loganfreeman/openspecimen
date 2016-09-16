@@ -1,5 +1,7 @@
 package com.krishagni.catissueplus.core.common.util;
 
+import java.io.File;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 
@@ -13,7 +15,11 @@ public class ConfigUtil {
 	private ConfigurationService cfgSvc;
 		
 	public static ConfigUtil getInstance() {
-		if (instance == null) {
+		if (instance == null || instance.cfgSvc == null) {
+			//
+			// instance.cfgSvc == null is defensive check added, which is useful
+			// when app is incorrectly wired
+			//
 			instance = new ConfigUtil();
 		}
 		
@@ -62,5 +68,9 @@ public class ConfigUtil {
 	
 	public Integer getIntSetting(String module, String name, Integer defValue) {
 		return cfgSvc.getIntSetting(module, name, defValue);
+	}
+
+	public File getFileSetting(String module, String name, File defValue) {
+		return cfgSvc.getSettingFile(module, name, defValue);
 	}
 }

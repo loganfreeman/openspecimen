@@ -4,6 +4,8 @@ angular.module('openspecimen')
       function parseDate(viewValue) {
         if (angular.isNumber(viewValue)) {
           viewValue = new Date(viewValue);
+        } else if (angular.isString(viewValue) && !isNaN(parseInt(viewValue))) {
+          viewValue = new Date(parseInt(viewValue));
         }
 
         if (!viewValue) {
@@ -43,9 +45,6 @@ angular.module('openspecimen')
         return new Date(value).toISOString();
       });
 
-      if (attrs.dateOnly != "true") {
-        return;
-      }
 
       // View -> Model
       ngModel.$parsers.push(function(val) {
@@ -54,7 +53,16 @@ angular.module('openspecimen')
             return '';
           }
 
-          return $filter('date')(val, 'yyyy-MM-dd');
+          if (attrs.dateOnly != "true") {
+            return new Date(val).getTime();
+          } else {
+            //
+            // TODO: This has been to address some SG timezone
+            // issue. Need to check whether sending epoch time
+            // without time component helps
+            //
+            return $filter('date')(val, 'yyyy-MM-dd');
+          }
         } catch (e) {
           return val;
         }

@@ -4,9 +4,7 @@
     "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping auto-import="false">
-  <class name="com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol"
-    table="CATISSUE_COLLECTION_PROTOCOL">
-
+  <class name="com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol" table="CATISSUE_COLLECTION_PROTOCOL" batch-size="25">
     <id name="id" column="IDENTIFIER">
       <generator class="native">
         <param name="sequence">CATISSUE_SPECIMEN_PROTOCOL_SEQ</param>
@@ -35,6 +33,10 @@
 
     <property name="enrollment" column="ENROLLMENT"/>
 
+    <property name="sopDocumentUrl" column="SOP_DOCUMENT_URL"/>
+
+    <property name="sopDocumentName" column="SOP_DOCUMENT_NAME"/>
+
     <property name="descriptionURL" column="DESCRIPTION_URL"/>
 
     <property name="specimenLabelFormat" column="LABEL_FORMAT"/>
@@ -54,7 +56,18 @@
     <property name="manualSpecLabelEnabled" column="MANUAL_SPEC_LABEL_ALLOWED"/>
 
     <property name="unsignedConsentDocumentURL" column="UNSIGNED_CONSENT_DOC_URL"/>
-    
+
+    <property name="visitNamePrintMode" column="VISIT_NAME_PRINT_MODE">
+      <type name="org.hibernate.type.EnumType">
+        <param name="enumClass">
+          com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol$VisitNamePrintMode
+        </param>
+        <param name="type">12</param>
+      </type>
+    </property>
+
+    <property name="visitNamePrintCopies" column="VISIT_NAME_PRINT_COPIES"/>
+
     <property name="spmnLabelPrePrintMode" column="SPMN_LABEL_PRE_PRINT_MODE">
       <type name="org.hibernate.type.EnumType">
         <param name="enumClass">

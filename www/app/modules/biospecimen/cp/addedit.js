@@ -1,21 +1,18 @@
 
 angular.module('os.biospecimen.cp.addedit', ['os.biospecimen.models', 'os.administrative.models'])
   .controller('CpAddEditCtrl', function(
-    $scope, $state, $stateParams, cp, extensionCtxt, User, Site, ExtensionsUtil, PvManager) {
+    $scope, $state, $stateParams, $sce, $timeout,
+    cp, extensionCtxt, CollectionProtocol, User, Site, ExtensionsUtil, PvManager) {
 
     function init() {
       $scope.cp = cp;
+
+      $scope.sopDocUploader = {ctrl: {}};
+      $scope.sopDocUploadUrl = $sce.trustAsResourceUrl(CollectionProtocol.getSopDocUploadUrl());
+
       $scope.deFormCtrl = {};
       $scope.extnOpts = ExtensionsUtil.getExtnOpts(cp, extensionCtxt);
       $scope.coordinators = [];
-
-      if (!cp.spmnLabelPrintSettings || cp.spmnLabelPrintSettings.length == 0) {
-        $scope.cp.spmnLabelPrintSettings = [
-          {"lineage": "New"},
-          {"lineage": "Derived"},
-          {"lineage": "Aliquot"}
-        ];
-      }
 
       loadPvs();
 
@@ -26,7 +23,12 @@ angular.module('os.biospecimen.cp.addedit', ['os.biospecimen.models', 'os.admini
           delete site.id;
         });
         delete cp.id;
-        cp.title = cp.shortTitle = cp.code = "";
+        cp.title = cp.shortTitle = cp.code = cp.sopDocumentName = cp.sopDocumentUrl = "";
+      } else {
+        cp.$$sopDocumentName = cp.sopDocumentName;
+        if (!!cp.sopDocumentName) {
+          cp.sopDocumentName = cp.sopDocumentName.substring(cp.sopDocumentName.indexOf("_") + 1);
+        }
       }
     };
 
@@ -41,25 +43,19 @@ angular.module('os.biospecimen.cp.addedit', ['os.biospecimen.models', 'os.admini
          
          $scope.cp.repositoryNames = cp.getRepositoryNames();
       });
-
-      $scope.spmnLabelPrePrintModes = PvManager.getPvs('specimen-label-pre-print-modes');
-      loadLabelAutoPrintModes();
     }
 
-    function loadLabelAutoPrintModes() {
-      $scope.spmnLabelAutoPrintModes = [];
+    function saveCp(cp) {
+      var q;
+      if ($scope.mode == 'copy') {
+        q = cp.copy($scope.copyFrom);
+      } else {
+        q = cp.$saveOrUpdate();
+      }
 
-      PvManager.loadPvs('specimen-label-auto-print-modes').then(
-        function(pvs) {
-          if ($scope.cp.spmnLabelPrePrintMode != 'NONE') {
-            $scope.spmnLabelAutoPrintModes = pvs;
-          } else {
-            $scope.spmnLabelAutoPrintModes = pvs.filter(
-      	      function(pv) {
-      	        return pv.name != 'PRE_PRINT';
-      	      }
-      	    );
-          }
+      q.then(
+        function(savedCp) {
+          $state.go('cp-detail.overview', {cpId: savedCp.id});
         }
       );
     }
@@ -77,18 +73,23 @@ angular.module('os.biospecimen.cp.addedit', ['os.biospecimen.models', 'os.admini
         cp.extensionDetail = formCtrl.getFormData();
       }
 
-      var q;
-      if ($scope.mode == 'copy') {
-        q = cp.copy($scope.copyFrom);
+      if ($scope.sopDocUploader.ctrl.data) {
+        $scope.sopDocUploader.ctrl.submit().then(
+          function(filename) {
+            cp.sopDocumentName = cp.$$sopDocumentName = filename;
+            cp.sopDocumentUrl = undefined;
+            saveCp(cp);
+          }
+        );
       } else {
-        q = cp.$saveOrUpdate();
-      }
-
-      q.then(
-        function(savedCp) {
-          $state.go('cp-detail.overview', {cpId: savedCp.id});
+        if ($scope.cp.sopDocumentUrl) {
+          cp.sopDocumentName = undefined; 
+        } else {
+          cp.sopDocumentName = cp.$$sopDocumentName;
         }
-      );
+
+        saveCp(cp);
+      }
     };
 
     $scope.onRepositorySelect = function(repositoryName) {
@@ -108,17 +109,8 @@ angular.module('os.biospecimen.cp.addedit', ['os.biospecimen.models', 'os.admini
       }
     }
 
-    $scope.onPrePrintModeChange = function() {
-      $scope.prePrintDisabled = !!$scope.cp.id && $scope.cp.spmnLabelPrePrintMode == 'NONE';
-
-      loadLabelAutoPrintModes();
-      if ($scope.prePrintDisabled) {
-        angular.forEach($scope.cp.spmnLabelPrintSettings, function(setting) {
-          if (setting.printMode == 'PRE_PRINT') {
-            setting.printMode = '';
-          }
-        });
-      }
+    $scope.removeSopDocument = function() {
+      cp.$$sopDocumentName = cp.sopDocumentName = undefined;
     }
 
     init();

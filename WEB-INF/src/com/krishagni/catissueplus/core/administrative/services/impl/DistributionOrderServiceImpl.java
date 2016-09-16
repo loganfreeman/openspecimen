@@ -101,16 +101,7 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 	@PlusTransactional
 	public ResponseEvent<List<DistributionOrderSummary>> getOrders(RequestEvent<DistributionOrderListCriteria> req) {
 		try {
-			Set<Long> siteIds = AccessCtrlMgr.getInstance().getReadAccessDistributionOrderSites();
-			if (siteIds != null && siteIds.isEmpty()) {
-				return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
-			}
-			
-			DistributionOrderListCriteria crit = req.getPayload();
-			if (siteIds != null) {
-				crit.siteIds(siteIds);
-			}
-						
+			DistributionOrderListCriteria crit = addOrderListCriteria(req.getPayload());
 			return ResponseEvent.response(daoFactory.getDistributionOrderDao().getOrders(crit));
 		} catch (OpenSpecimenException ose) {
 			return ResponseEvent.error(ose);
@@ -118,7 +109,20 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 			return ResponseEvent.serverError(e);
 		}
 	}
-	
+
+	@Override
+	@PlusTransactional
+	public ResponseEvent<Long> getOrdersCount(RequestEvent<DistributionOrderListCriteria> req) {
+		try {
+			DistributionOrderListCriteria crit = addOrderListCriteria(req.getPayload());
+			return ResponseEvent.response(daoFactory.getDistributionOrderDao().getOrdersCount(crit));
+		} catch (OpenSpecimenException ose) {
+			return ResponseEvent.error(ose);
+		} catch (Exception e) {
+			return ResponseEvent.serverError(e);
+		}
+	}
+
 	@Override
 	@PlusTransactional
 	public ResponseEvent<DistributionOrderDetail> getOrder(RequestEvent<Long> req) {
@@ -150,19 +154,25 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 			
 			List<String> specimenLabels = Utility.<List<String>>collect(order.getOrderItems(), "specimen.label");
 			getValidSpecimens(order.getDistributionProtocol(), specimenLabels, ose);
-			
-			ose.checkAndThrow();
 
+			Status inputStatus = null;
+			try {
+				inputStatus = Status.valueOf(input.getStatus());
+			} catch (IllegalArgumentException iae) {
+				ose.addError(DistributionOrderErrorCode.INVALID_STATUS, input.getStatus());
+			}
+
+			ose.checkAndThrow();
+			
 			SpecimenRequest request = order.getRequest();
 			if (request != null && request.isClosed()) {
 				throw OpenSpecimenException.userError(SpecimenRequestErrorCode.CLOSED, request.getId());
 			}
-			
-			Status inputStatus = Status.valueOf(input.getStatus());
+
 			if (inputStatus == Status.EXECUTED) {
 				order.distribute();
 			}
-			
+
 			daoFactory.getDistributionOrderDao().saveOrUpdate(order, true);
 			sendOrderProcessedEmail(order, null);
 
@@ -182,11 +192,14 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 		try {
 			DistributionOrderDetail input = req.getPayload();
 			DistributionOrder existingOrder = getOrder(input.getId(), input.getName());
-			
+			if (existingOrder.isOrderExecuted()) {
+				return ResponseEvent.userError(DistributionOrderErrorCode.CANT_UPDATE_EXEC_ORDER, existingOrder.getName());
+			}
+
 			AccessCtrlMgr.getInstance().ensureUpdateDistributionOrderRights(existingOrder);
 			DistributionOrder newOrder = distributionFactory.createDistributionOrder(input, null);
 			AccessCtrlMgr.getInstance().ensureUpdateDistributionOrderRights(newOrder);
-			
+
 			OpenSpecimenException ose = new OpenSpecimenException(ErrorType.USER_ERROR);
 			ensureUniqueConstraints(existingOrder, newOrder, ose);
 			
@@ -325,6 +338,18 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 		return daoFactory.getDistributionOrderDao().getOrderIds(key, value);
 	}
 
+	private DistributionOrderListCriteria addOrderListCriteria(DistributionOrderListCriteria crit) {
+		Set<Long> siteIds = AccessCtrlMgr.getInstance().getReadAccessDistributionOrderSites();
+		if (siteIds != null && siteIds.isEmpty()) {
+			throw OpenSpecimenException.userError(RbacErrorCode.ACCESS_DENIED);
+		}
+
+		if (siteIds != null) {
+			crit.siteIds(siteIds);
+		}
+
+		return crit;
+	}
 
 	private void ensureUniqueConstraints(DistributionOrder existingOrder, DistributionOrder newOrder, OpenSpecimenException ose) {
 		if (existingOrder == null || !newOrder.getName().equals(existingOrder.getName())) {
@@ -353,7 +378,8 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 		}
 
 		if (specimens.size() != specimenLabels.size()) {
-			ose.addError(DistributionOrderErrorCode.SPECIMEN_DOES_NOT_EXIST);
+			List<String> labels = (List<String>) CollectionUtils.subtract(specimenLabels, Utility.<List<String>>collect(specimens, "label"));
+			ose.addError(DistributionOrderErrorCode.SPECIMEN_DOES_NOT_EXIST, labels);
 			return null;
 		}
 		
@@ -420,7 +446,7 @@ public class DistributionOrderServiceImpl implements DistributionOrderService, O
 			}
 		});
 	}
-	
+
 	private String msg(String code) {
 		return MessageUtil.getInstance().getMessage(code);
 	}

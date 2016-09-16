@@ -2,6 +2,7 @@
 package com.krishagni.catissueplus.rest.controller;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -12,7 +13,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -30,7 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
-import com.krishagni.catissueplus.core.biospecimen.events.MergeCpDetail;
+import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol;
 import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolSummary;
 import com.krishagni.catissueplus.core.biospecimen.events.ConsentTierDetail;
@@ -40,17 +41,20 @@ import com.krishagni.catissueplus.core.biospecimen.events.CopyCpOpDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CpQueryCriteria;
 import com.krishagni.catissueplus.core.biospecimen.events.CpWorkflowCfgDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CpWorkflowCfgDetail.WorkflowDetail;
+import com.krishagni.catissueplus.core.biospecimen.events.FileDetail;
+import com.krishagni.catissueplus.core.biospecimen.events.MergeCpDetail;
 import com.krishagni.catissueplus.core.biospecimen.repository.CpListCriteria;
 import com.krishagni.catissueplus.core.biospecimen.services.CollectionProtocolService;
+import com.krishagni.catissueplus.core.common.events.DeleteEntityOp;
 import com.krishagni.catissueplus.core.common.events.DependentEntityDetail;
+import com.krishagni.catissueplus.core.common.events.EntityDeleteResp;
 import com.krishagni.catissueplus.core.common.events.Operation;
 import com.krishagni.catissueplus.core.common.events.RequestEvent;
 import com.krishagni.catissueplus.core.common.events.Resource;
 import com.krishagni.catissueplus.core.common.events.ResponseEvent;
+import com.krishagni.catissueplus.core.common.util.Utility;
 import com.krishagni.catissueplus.core.de.events.CpCatalogSettingDetail;
-import com.krishagni.catissueplus.core.de.events.FormCtxtSummary;
-import com.krishagni.catissueplus.core.de.events.ListEntityFormsOp;
-import com.krishagni.catissueplus.core.de.events.ListEntityFormsOp.EntityType;
+import com.krishagni.catissueplus.core.de.events.FormSummary;
 import com.krishagni.catissueplus.core.de.events.SavedQuerySummary;
 import com.krishagni.catissueplus.core.de.services.CatalogService;
 import com.krishagni.catissueplus.core.de.services.FormService;
@@ -92,7 +96,7 @@ public class CollectionProtocolsController {
 			@RequestParam(value = "startAt", required = false, defaultValue = "0") 
 			int startAt,
 			
-			@RequestParam(value = "maxResults", required = false, defaultValue = "100") 
+			@RequestParam(value = "maxResults", required = false, defaultValue = "100")
 			int maxResults,
 			
 			@RequestParam(value = "detailedList", required = false, defaultValue = "false") 
@@ -113,6 +117,33 @@ public class CollectionProtocolsController {
 		return resp.getPayload();
 	}
 	
+	@RequestMapping(method = RequestMethod.GET, value = "/count")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public Map<String, Long> getCollectionProtocolsCount(
+			@RequestParam(value = "query", required = false)
+			String searchStr,
+			
+			@RequestParam(value = "title", required = false)
+			String title,
+			
+			@RequestParam(value = "piId", required = false)
+			Long piId,
+			
+			@RequestParam(value = "repositoryName", required = false)
+			String repositoryName) {
+		
+		CpListCriteria crit = new CpListCriteria()
+			.query(searchStr)
+			.title(title)
+			.piId(piId)
+			.repositoryName(repositoryName);
+		
+		ResponseEvent<Long> resp = cpSvc.getProtocolsCount(getRequest(crit));
+		resp.throwErrorIfUnsuccessful();
+		return Collections.singletonMap("count", resp.getPayload());
+	}
+
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
@@ -138,6 +169,9 @@ public class CollectionProtocolsController {
 		resp.throwErrorIfUnsuccessful();
 		
 		CollectionProtocolDetail cp = resp.getPayload();
+		cp.setSopDocumentName(null);
+		cp.setSopDocumentUrl(null);
+
 		ObjectMapper mapper = new ObjectMapper();
 		FilterProvider filters = new SimpleFilterProvider().addFilter("withoutId", SimpleBeanPropertyFilter.serializeAllExcept("id"));		
 		String def = mapper.writer(filters).withDefaultPrettyPrinter().writeValueAsString(cp);
@@ -169,6 +203,40 @@ public class CollectionProtocolsController {
 		return resp.getPayload();
 	}
 	
+	@RequestMapping(method = RequestMethod.GET, value="/{id}/sop-document")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public void downloadSopDocument(@PathVariable("id") Long cpId, HttpServletResponse httpResp)
+	throws IOException {
+		ResponseEvent<File> resp = cpSvc.getSopDocument(getRequest(cpId));
+		resp.throwErrorIfUnsuccessful();
+
+		File file = resp.getPayload();
+		String fileName = file.getName().split("_", 2)[1];
+		Utility.sendToClient(httpResp, fileName, file);
+	}
+
+	@RequestMapping(method = RequestMethod.POST, value="/sop-documents")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public String uploadSopDocument(@PathVariable("file") MultipartFile file)
+	throws IOException {
+		InputStream in = null;
+		try {
+			in = file.getInputStream();
+
+			FileDetail detail = new FileDetail();
+			detail.setFilename(file.getOriginalFilename());
+			detail.setFileIn(in);
+
+			ResponseEvent<String> resp = cpSvc.uploadSopDocument(getRequest(detail));
+			resp.throwErrorIfUnsuccessful();
+			return resp.getPayload();
+		} finally {
+			IOUtils.closeQuietly(in);
+		}
+	}
+
 	@RequestMapping(method = RequestMethod.POST)
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
@@ -231,10 +299,18 @@ public class CollectionProtocolsController {
 	@RequestMapping(method = RequestMethod.DELETE, value="/{id}")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
-	public CollectionProtocolDetail deleteCollectionProtocol(@PathVariable Long id) {
-		ResponseEvent<CollectionProtocolDetail> resp = cpSvc.deleteCollectionProtocol(getRequest(id));
-		resp.throwErrorIfUnsuccessful();
+	public EntityDeleteResp<CollectionProtocolDetail> deleteCollectionProtocol(
+			@PathVariable Long id,
+			
+			@RequestParam(value = "forceDelete", required = false, defaultValue = "false") 
+			boolean forceDelete) {
 		
+		DeleteEntityOp crit = new DeleteEntityOp();
+		crit.setId(id);
+		crit.setForceDelete(forceDelete);
+		
+		ResponseEvent<EntityDeleteResp<CollectionProtocolDetail>> resp = cpSvc.deleteCollectionProtocol(getRequest(crit));
+		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}
 	
@@ -427,21 +503,25 @@ public class CollectionProtocolsController {
 		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}
-	
+
 	@RequestMapping(method = RequestMethod.GET, value="/extension-form")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
-	public FormCtxtSummary getForm() {
-		ListEntityFormsOp op = new ListEntityFormsOp();
-		op.setEntityType(EntityType.CP_EXTN); 
-        
-		RequestEvent<ListEntityFormsOp> req = new RequestEvent<ListEntityFormsOp>(op);
-		ResponseEvent<List<FormCtxtSummary>> resp = formSvc.getEntityForms(req);
-		resp.throwErrorIfUnsuccessful();
-		
-		return CollectionUtils.isNotEmpty(resp.getPayload()) ? resp.getPayload().get(0) : null;
+	public Map<String, Object> getForm() {
+		return formSvc.getExtensionInfo(-1L, CollectionProtocol.EXTN);
 	}
-	
+
+	@RequestMapping(method = RequestMethod.GET, value="/{id}/forms")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public List<FormSummary> getForms(
+			@PathVariable("id")
+			Long cpId,
+
+			@RequestParam(value = "entityType", required = true)
+			String[] entityTypes) {
+		return formSvc.getEntityForms(cpId, entityTypes);
+	}
 	@RequestMapping(method = RequestMethod.POST, value="/merge")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody

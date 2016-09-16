@@ -1,5 +1,6 @@
 package com.krishagni.catissueplus.core.biospecimen.domain.factory.impl;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -14,6 +15,7 @@ import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol;
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol.SpecimenLabelAutoPrintMode;
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol.SpecimenLabelPrePrintMode;
+import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol.VisitNamePrintMode;
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolSite;
 import com.krishagni.catissueplus.core.biospecimen.domain.CpSpecimenLabelPrintSetting;
 import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
@@ -74,19 +76,22 @@ public class CollectionProtocolFactoryImpl implements CollectionProtocolFactory 
 		setShortTitle(input, cp, ose);
 		setCode(input, cp, ose);
 		setPrincipalInvestigator(input, cp, ose);
-		cp.setStartDate(input.getStartDate());
-		cp.setEndDate(input.getEndDate());
 		setCoordinators(input, cp, ose);
+		setDate(input, cp, ose);
 
 		cp.setIrbIdentifier(input.getIrbId());
 		cp.setPpidFormat(input.getPpidFmt());
 		cp.setManualPpidEnabled(input.getManualPpidEnabled());
 		cp.setEnrollment(input.getAnticipatedParticipantsCount());
+		cp.setSopDocumentUrl(input.getSopDocumentUrl());
+		cp.setSopDocumentName(input.getSopDocumentName());
 		cp.setDescriptionURL(input.getDescriptionUrl());
 		cp.setConsentsWaived(input.getConsentsWaived());
 
 		setVisitNameFmt(input, cp, ose);
-		setLabelFormats(input, cp, ose);		
+		setLabelFormats(input, cp, ose);
+		setVisitNamePrintMode(input, cp, ose);
+		cp.setVisitNamePrintCopies(input.getVisitNamePrintCopies());
 		setSpecimenLabelPrePrintMode(input, cp, ose);
 		setSpecimenLabelPrintSettings(input, cp, ose);
 		setActivityStatus(input, cp, ose);
@@ -105,6 +110,7 @@ public class CollectionProtocolFactoryImpl implements CollectionProtocolFactory 
 		setShortTitle(input, cp, ose);
 		setCode(input, cp, ose);
 
+
 		if (CollectionUtils.isNotEmpty(input.getCpSites())) {
 			setSites(input, cp, ose);
 		}
@@ -116,19 +122,22 @@ public class CollectionProtocolFactoryImpl implements CollectionProtocolFactory 
 		if (CollectionUtils.isNotEmpty(input.getCoordinators())) {
 			setCoordinators(input, cp, ose);
 		}
-
-		if (input.getStartDate() != null) {
-			cp.setStartDate(input.getStartDate());
-		}
-		
-		if (input.getEndDate() != null) {
-			cp.setEndDate(input.getEndDate());
-		}
 		
 		if (StringUtils.isNotBlank(input.getIrbId())) {
 			cp.setIrbIdentifier(input.getIrbId());
 		}
-		
+
+		if (input.getStartDate() == null) {
+			input.setStartDate(cp.getStartDate());
+		}
+
+		if (input.getEndDate() == null) {
+			input.setEndDate(cp.getEndDate());
+		}
+
+		setDate(input, cp, ose);
+		cp.setSopDocumentUrl(input.getSopDocumentUrl());
+		cp.setSopDocumentName(input.getSopDocumentName());
 		ose.checkAndThrow();
 		return cp;
 	}
@@ -232,6 +241,18 @@ public class CollectionProtocolFactoryImpl implements CollectionProtocolFactory 
 		result.setCoordinators(coordinators);
 	}
 	
+	private void setDate(CollectionProtocolDetail input, CollectionProtocol result, OpenSpecimenException ose) {
+		Date startDt = input.getStartDate();
+		result.setStartDate(startDt);
+
+		Date endDt = input.getEndDate();
+		result.setEndDate(endDt);
+
+		if (startDt != null && endDt != null && startDt.after(endDt)) {
+			ose.addError(CpErrorCode.START_DT_GT_END_DT, startDt, endDt);
+		}
+	}
+
 	private void setActivityStatus(CollectionProtocolDetail input, CollectionProtocol result, OpenSpecimenException ose) {
 		String status = input.getActivityStatus();
 		
@@ -278,21 +299,37 @@ public class CollectionProtocolFactoryImpl implements CollectionProtocolFactory 
 		
 		return nameFmt;
 	}
-	
+
+	private void setVisitNamePrintMode(CollectionProtocolDetail input, CollectionProtocol cp, OpenSpecimenException ose) {
+		if (StringUtils.isBlank(input.getVisitNamePrintMode())) {
+			return;
+		}
+
+		VisitNamePrintMode printMode = null;
+		try {
+			printMode = VisitNamePrintMode.valueOf(input.getVisitNamePrintMode());
+		} catch (IllegalArgumentException iae) {
+			ose.addError(CpErrorCode.INVALID_VISIT_NAME_PRINT_MODE, input.getVisitNamePrintMode());
+			return;
+		}
+
+		cp.setVisitNamePrintMode(printMode);
+	}
+
 	private void setSpecimenLabelPrePrintMode(CollectionProtocolDetail input, CollectionProtocol cp, OpenSpecimenException ose) {
 		if (StringUtils.isBlank(input.getSpmnLabelPrePrintMode())) {
 			return;
 		}
 		
-		SpecimenLabelPrePrintMode spmnLabelPrePrintMode = null; 
+		SpecimenLabelPrePrintMode printMode = null;
 		try {
-			spmnLabelPrePrintMode = SpecimenLabelPrePrintMode.valueOf(input.getSpmnLabelPrePrintMode());
+			printMode = SpecimenLabelPrePrintMode.valueOf(input.getSpmnLabelPrePrintMode());
 		} catch(IllegalArgumentException iae) {
 			ose.addError(CpErrorCode.INVALID_SPMN_LABEL_PRE_PRINT_MODE, input.getSpmnLabelPrePrintMode());
 			return;
 		}
 
-		cp.setSpmnLabelPrePrintMode(spmnLabelPrePrintMode);
+		cp.setSpmnLabelPrePrintMode(printMode);
 	}
 	
 	private void setSpecimenLabelPrintSettings(CollectionProtocolDetail input, CollectionProtocol cp, OpenSpecimenException ose) {

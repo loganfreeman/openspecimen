@@ -101,7 +101,12 @@
 .os-table.bulk-edit .os-md-input .ui-select-search {
   margin-top: 0px;
   /*height: 26px!important;*/
-  background: transparent;
+  /*background: transparent;*/
+}
+
+.os-table.bulk-edit button.right {
+  float: right;
+  padding: 6px 0px 0px 0px;
 }
 
 .os-md-input .ui-select-bootstrap > .ui-select-match > .ui-select-toggle {
@@ -133,6 +138,23 @@
   border-left: 6px solid transparent;
 }
 
+.os-md-input .ui-select-multiple.form-control {
+  border: none;
+  padding-top: 2px;
+  box-shadow: none;
+}
+
+.os-md-input .ui-select-container.ui-select-multiple .ui-select-match {
+  display: inline;
+  border: none;
+}
+
+.os-md-input .ui-select-multiple .ui-select-search {
+  display: inline;
+  padding-bottom: 0px;
+  border-bottom: 2px solid #ddd!important;
+}
+
 .os-md-input-addon, 
 .os-md-input + .os-input-addon-right {
   border: none;
@@ -143,3 +165,22 @@
   margin-top: 0px!important;
 }
 
+.os-md-form label {
+  color: #666;
+}
+
+.os-md-form .input {
+  margin-top: -17px;
+}
+
+.os-md-form .form-group {
+  margin-bottom: 30px;
+}
+
+.os-md-form .os-md-input.read {
+  margin-top: 7px;
+}
+
+.os-md-form .input, .os-md-form .read {
+  padding-left: 0px;
+}

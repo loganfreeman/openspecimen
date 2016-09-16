@@ -24,21 +24,82 @@ angular.module('os.biospecimen.participant',
       .state('cp-view', {
         url: '/cp-view/:cpId',
         template: '<div ui-view></div>',
-        controller: function($scope, cp) {
+        controller: function($scope, cp, cpViewCtx) {
           $scope.cp = cp;
+          $scope.cpViewCtx = cpViewCtx;
         },
         resolve: {
           cp: function($stateParams, CollectionProtocol) {
             return CollectionProtocol.getById($stateParams.cpId);
+          },
+
+          cpViewCtx: function(cp, AuthorizationService) {
+            return {
+              participantUpdateAllowed: AuthorizationService.isAllowed({
+                resource: 'ParticipantPhi',
+                operations: ['Create', 'Update'],
+                cp: cp.shortTitle
+              }),
+
+              visitSpecimenUpdateAllowed: AuthorizationService.isAllowed({
+                resource: 'VisitAndSpecimen',
+                operations: ['Create', 'Update'],
+                cp: cp.shortTitle
+              })
+            }
+          },
+
+          listView: function(cp, CpConfigSvc) {
+            return CpConfigSvc.getListView(cp.id, 'participant-list');
           }
         },
         parent: 'signed-in',
         abstract: true
       })
-      .state('participant-list', {
-        url: '/participants',
-        templateUrl: 'modules/biospecimen/participant/list.html',
-        controller: 'ParticipantListCtrl',
+      .state('cp-summary-view', {
+        url: '/summary-view',
+        controller: function($state, cp, summaryView) {
+          $state.go(summaryView, {cpId: cp.id}, {location: 'replace'});
+        },
+        resolve: {
+          summaryView: function(listView, CpConfigSvc) {
+            var summaryView = listView;
+
+            var summarySt = CpConfigSvc.getSummaryState();
+            if (summarySt) {
+              summaryView = summarySt;
+            }
+
+            return summaryView;
+          }
+        },
+        parent: 'cp-view'
+      })
+      .state('cp-list-view', {
+        url: '/list-view',
+        controller: function($state, cp, listView) {
+          $state.go(listView, {cpId: cp.id}, {location: 'replace'});
+        },
+        parent: 'cp-view'
+      })
+      .state('cp-list-view-root', {
+        templateUrl: 'modules/biospecimen/participant/list-view.html',
+        controller: function($scope, cp, defSopDoc, defSopUrl) {
+          var ctx = $scope.listViewCtx = {
+            sopDocDownloadUrl: cp.getSopDocDownloadUrl()
+          };
+
+          ctx.sopDoc = cp.sopDocumentName;
+          if (!ctx.sopDoc) {
+            ctx.sopUrl = cp.sopDocumentUrl;
+            if (!ctx.sopUrl) {
+              ctx.sopDoc = defSopDoc.value;
+              if (!ctx.sopDoc) {
+                ctx.sopUrl = defSopUrl.value;
+              }
+            }
+          }
+        },
         resolve: {
           catalogQuery: function(cp) {
             if (cp.catalogQuery) {
@@ -50,6 +111,79 @@ angular.module('os.biospecimen.participant',
                 cp.catalogQuery = query;
               }
             );
+          },
+
+          defSopDoc: function(cp, SettingUtil) {
+            if (!!cp.sopDocumentName || !!cp.sopDocumentUrl) {
+              return null;
+            }
+
+            return SettingUtil.getSetting('biospecimen', 'cp_sop_doc');
+          },
+
+          defSopUrl: function(cp, defSopDoc, SettingUtil) {
+            if (!!cp.sopDocumentName || !!cp.sopDocumentUrl || !!defSopDoc.value) {
+              return null;
+            }
+
+            return SettingUtil.getSetting('biospecimen', 'cp_sop_doc_url');
+          }
+        },
+        parent: 'cp-view',
+        abstract: true
+      })
+      .state('participant-list', {
+        url: '/participants',
+        templateUrl: 'modules/biospecimen/participant/list.html',
+        controller: 'ParticipantListCtrl',
+        parent: 'cp-list-view-root'
+      })
+      .state('import-cp-objs', {
+        url: '/import-cp-objs',
+        templateUrl: 'modules/common/import/add.html',
+        controller: 'ImportObjectCtrl',
+        resolve: {
+          allowedEntityTypes: function(cpViewCtx) {
+            var entityTypes = [];
+            if (cpViewCtx.participantUpdateAllowed) {
+              entityTypes.push('Participant');
+            }
+
+            if (cpViewCtx.visitSpecimenUpdateAllowed) {
+              entityTypes = entityTypes.concat(['SpecimenCollectionGroup', 'Specimen', 'SpecimenEvent']);
+            }
+
+            return entityTypes;
+          },
+
+          forms: function(cp, allowedEntityTypes) {
+            return allowedEntityTypes.length > 0 ? cp.getForms(allowedEntityTypes) : [];
+          },
+
+          importDetail: function(cp, allowedEntityTypes, forms, ImportUtil) {
+            return ImportUtil.getImportDetail(cp, allowedEntityTypes, forms);
+          }
+        },
+        parent: 'cp-view'
+      })
+      .state('import-cp-jobs', {
+        url: '/import-cp-jobs',
+        templateUrl: 'modules/common/import/list.html',
+        controller: 'ImportJobsListCtrl',
+        resolve: {
+          importDetail: function(cp) {
+            return {
+              breadcrumbs: [
+                {state: 'cp-list-view', title:  cp.shortTitle,     params: '{cpId:' + cp.id + '}'}
+              ],
+              title: 'bulk_imports.jobs_list',
+              objectTypes: [
+                'cpr', 'participant', 'consent', 'visit',
+                'specimen', 'specimenDerivative', 'specimenAliquot',
+                'masterSpecimen', 'extensions'
+              ],
+              objectParams: {cpId: cp.id}
+            }
           }
         },
         parent: 'cp-view'
@@ -64,6 +198,30 @@ angular.module('os.biospecimen.participant',
             } 
 
             return new CollectionProtocolRegistration({registrationDate: new Date()});
+          },
+
+          hasSde: function($injector) {
+            return $injector.has('sdeFieldsSvc');
+          },
+
+          sysDict: function($stateParams, hasSde, CpConfigSvc) {
+            if (!hasSde) {
+              return [];
+            }
+
+            return undefined || []; // CpConfigSvc.getDictionary(null);
+          },
+
+          cpDict: function($stateParams, hasSde, CpConfigSvc) {
+            if (!hasSde) {
+              return [];
+            }
+
+            return CpConfigSvc.getDictionary($stateParams.cpId, []);
+          },
+
+          hasDict: function(hasSde, sysDict, cpDict) {
+            return hasSde && (cpDict.length > 0 || sysDict.length > 0);
           }
         },
         controller: 'ParticipantRootCtrl',
@@ -84,8 +242,8 @@ angular.module('os.biospecimen.participant',
           return CpConfigSvc.getRegParticipantCtrl($stateParams.cpId, $stateParams.cprId);
         },
         resolve: {
-          extensionCtxt: function(Participant) {
-            return Participant.getExtensionCtxt();
+          extensionCtxt: function(cp, Participant) {
+            return Participant.getExtensionCtxt({cpId: cp.id});
           }
         },
         parent: 'participant-root'
@@ -109,14 +267,39 @@ angular.module('os.biospecimen.participant',
       })
       .state('participant-detail.overview', {
         url: '/overview',
-        templateProvider: function(PluginReg, $q) {
-          return $q.when(PluginReg.getTmpls("participant-detail", "overview", "modules/biospecimen/participant/overview.html")).then(
+        templateProvider: function(sdeView, $q, PluginReg) {
+          var viewName = 'participant-detail',
+              secName  = 'overview',
+              defTmpl  = 'modules/biospecimen/participant/overview.html';
+
+          if (sdeView) {
+            viewName = 'sde-participant-detail',
+            defTmpl = 'plugin-ui-resources/sde/samples-overview.html'
+          }
+
+          return $q.when(PluginReg.getTmpls(viewName, secName, defTmpl)).then(
             function(tmpls) {
               return '<div ng-include src="\'' + tmpls[0] + '\'"></div>';
             }
           );
         },
-        controller: 'ParticipantOverviewCtrl',
+        controllerProvider: function(sdeView) {
+          return sdeView ? 'sdeSamplesOverviewCtrl' : 'ParticipantOverviewCtrl';
+        },
+        resolve: {
+          sdeView: function($stateParams, visits, hasSde, CpConfigSvc) {
+            if (!hasSde || visits.length > 1) {
+              return false;
+            }
+
+            return CpConfigSvc.getWorkflowData($stateParams.cpId, 'sde').then(
+              function(data) {
+                var fields = data.singlePatientSamples;
+                return angular.isArray(fields) && fields.length > 0;
+              }
+            );
+          }
+        },
         parent: 'participant-detail'
       })
       .state('participant-detail.consents', {

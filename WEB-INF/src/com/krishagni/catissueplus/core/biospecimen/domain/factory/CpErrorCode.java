@@ -22,6 +22,8 @@ public enum CpErrorCode implements ErrorCode {
 	PI_NOT_FOUND,
 	
 	INVALID_COORDINATORS,
+
+	START_DT_GT_END_DT,
 	
 	CONSENTS_WAIVED_REQUIRED,
 	
@@ -54,6 +56,14 @@ public enum CpErrorCode implements ErrorCode {
 	CONSENTS_WAIVED,
 	
 	DUP_CP_SITE_CODES,
+
+	SOP_DOC_NOT_FOUND,
+
+	SOP_DOC_MOVED_OR_DELETED,
+
+	INVALID_SOP_DOC,
+
+	INVALID_VISIT_NAME_PRINT_MODE,
 	
 	INVALID_SPMN_LABEL_PRE_PRINT_MODE,
 	
@@ -65,7 +75,9 @@ public enum CpErrorCode implements ErrorCode {
 	
 	DUP_PRINT_SETTING,
 
-	CANNOT_MERGE_FMT_DIFFERS;
+	CANNOT_MERGE_FMT_DIFFERS,
+	
+	REF_ENTITY_FOUND;
 	
 	@Override
 	public String code() {

@@ -9,8 +9,7 @@
         <span class="fa fa-plus"></span>
         <span translate="common.buttons.create">Create</span>
       </button>
-      <!--<div show-if-allowed="orderResource.createOpts" dropdown class="inline">
-        will be added in v3.1.1
+      <div show-if-allowed="orderResource.createOpts" dropdown class="inline">
         <button class="default dropdown-toggle">
           <span translate="common.buttons.import">Import</span>
           <span class="fa fa-caret-down"></span>
@@ -18,18 +17,18 @@
         <ul class="dropdown-menu dropdown-menu-right">
           <li>
             <a ui-sref="order-import">
-              <i class="fa fa-share"></i>
+              <span class="fa fa-share"></span>
               <span translate="orders.list">Distribution Orders</span>
             </a>
           </li>
           <li>
             <a ui-sref="order-import-jobs">
-              <i class="fa fa-table"></i>
-              <span translate="common.view_jobs">View Jobs</span>
+              <span class="fa fa-list-alt"></span>
+              <span translate="bulk_imports.view_jobs">View Jobs</span>
             </a>
           </li>
         </ul>
-      </div>-->
+      </div>
       <button show-if-allowed="orderResource.updateOpts" class="default" ui-sref="order-return-specimens">
         <span class="fa fa-undo"></span>
         <span translate="orders.buttons.return_specimens">Return Specimens</span>
@@ -43,6 +42,9 @@
   </div>
 
   <div class="container">
+    <div>
+      <os-list-pager opts="pagerOpts"></os-list-pager>
+    </div>
     <table class="os-table os-table-hover">
       <thead class="os-table-head">
         <tr class="row">

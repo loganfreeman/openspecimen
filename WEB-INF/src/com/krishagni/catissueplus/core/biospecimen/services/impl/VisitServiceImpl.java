@@ -20,9 +20,11 @@ import com.krishagni.catissueplus.core.biospecimen.domain.Visit;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.VisitErrorCode;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.VisitFactory;
 import com.krishagni.catissueplus.core.biospecimen.events.FileDetail;
+import com.krishagni.catissueplus.core.biospecimen.events.LabelPrintJobSummary;
+import com.krishagni.catissueplus.core.biospecimen.events.PrintVisitNameDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SprDetail;
-import com.krishagni.catissueplus.core.biospecimen.events.SprFileDownloadDetail;
+import com.krishagni.catissueplus.core.biospecimen.events.FileDownloadDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SprLockDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.VisitDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.VisitSpecimenDetail;
@@ -37,6 +39,8 @@ import com.krishagni.catissueplus.core.common.OpenSpecimenAppCtxProvider;
 import com.krishagni.catissueplus.core.common.Pair;
 import com.krishagni.catissueplus.core.common.PlusTransactional;
 import com.krishagni.catissueplus.core.common.access.AccessCtrlMgr;
+import com.krishagni.catissueplus.core.common.domain.LabelPrintJob;
+import com.krishagni.catissueplus.core.common.domain.PrintItem;
 import com.krishagni.catissueplus.core.common.errors.ErrorType;
 import com.krishagni.catissueplus.core.common.errors.OpenSpecimenException;
 import com.krishagni.catissueplus.core.common.events.DependentEntityDetail;
@@ -109,22 +113,27 @@ public class VisitServiceImpl implements VisitService, ObjectStateParamsResolver
 	@Override
 	public ResponseEvent<List<VisitDetail>> getVisits(RequestEvent<VisitsListCriteria> criteria) {
 		VisitsListCriteria crit = criteria.getPayload();
-		List<Visit> visits = new ArrayList<Visit>();
+		List<Visit> visits = new ArrayList<>();
+		boolean hasPhiFields = false;
 
 		if (StringUtils.isNotEmpty(crit.name())) {
 			visits.add(getVisit(null, crit.name()));
 		} else if (StringUtils.isNotEmpty(crit.sprNumber())) {
 			visits.addAll(daoFactory.getVisitsDao().getBySpr(crit.sprNumber()));
+			hasPhiFields = true;
 		}
 
 		Iterator<Visit> iterator = visits.iterator();
 		while (iterator.hasNext()) {
 			Visit visit = iterator.next();
 			try {
-				AccessCtrlMgr.getInstance().ensureReadVisitRights(visit, false);
+				boolean phiAccess = AccessCtrlMgr.getInstance().ensureReadVisitRights(visit, hasPhiFields);
+				if (hasPhiFields && !phiAccess) {
+					iterator.remove();
+				}
 			} catch (OpenSpecimenException ose) {
 				if (ose.getErrorType().equals(ErrorType.USER_ERROR)) {
-					visits.remove(visit);
+					iterator.remove();
 				}
 			}
 		}
@@ -243,10 +252,27 @@ public class VisitServiceImpl implements VisitService, ObjectStateParamsResolver
 
 	@Override
 	@PlusTransactional
-	public ResponseEvent<FileDetail> getSpr(RequestEvent<SprFileDownloadDetail> req) {
+	public ResponseEvent<LabelPrintJobSummary> printVisitNames(RequestEvent<PrintVisitNameDetail> req) {
+		LabelPrinter<Visit> printer = getLabelPrinter();
+		if (printer == null) {
+			return ResponseEvent.serverError(VisitErrorCode.NO_PRINTER_CONFIGURED);
+		}
+
+		PrintVisitNameDetail printDetail = req.getPayload();
+		LabelPrintJob job = printer.print(PrintItem.make(getVisitsToPrint(printDetail), printDetail.getCopies()));
+		if (job == null) {
+			return ResponseEvent.userError(VisitErrorCode.PRINT_ERROR);
+		}
+
+		return ResponseEvent.response(LabelPrintJobSummary.from(job));
+	}
+
+	@Override
+	@PlusTransactional
+	public ResponseEvent<FileDetail> getSpr(RequestEvent<FileDownloadDetail> req) {
 		try {
-			SprFileDownloadDetail detail = req.getPayload();
-			Visit visit = getVisit(detail.getVisitId(), detail.getVisitName());
+			FileDownloadDetail detail = req.getPayload();
+			Visit visit = getVisit(detail.getId(), detail.getName());
 			
 			AccessCtrlMgr.getInstance().ensureReadSprRights(visit);
 			
@@ -267,8 +293,8 @@ public class VisitServiceImpl implements VisitService, ObjectStateParamsResolver
 			}
 
 			FileDetail fileDetail = new FileDetail();
-			fileDetail.setFile(file);
-			fileDetail.setFileName(visit.getName() + fileExtension);
+			fileDetail.setFileOut(file);
+			fileDetail.setFilename(visit.getName() + fileExtension);
 			return ResponseEvent.response(fileDetail);
 		} catch (OpenSpecimenException ose) {
 			return ResponseEvent.error(ose);
@@ -282,27 +308,27 @@ public class VisitServiceImpl implements VisitService, ObjectStateParamsResolver
 	public ResponseEvent<String> uploadSprFile(RequestEvent<SprDetail> req) {
 		try {
 			SprDetail detail = req.getPayload();
-			Visit visit = getVisit(detail.getVisitId(), null);
+			Visit visit = getVisit(detail.getId(), null);
 			
 			ensureUpdateSprRights(visit);
 			
-			String sprName = detail.getName();
+			String filename = detail.getFilename();
 			if (detail.isTextContent() || detail.isPdfContent()) {
 				String sprText = getTextFromReq(detail);
 
 				File sprFile = new File(getSprDirPath(visit.getId()) + File.separator + "spr.txt");
 				FileUtils.writeStringToFile(sprFile, sprText, (String) null, false);
 				
-				sprName = sprName.substring(0, sprName.lastIndexOf(".")) + ".txt";
-				visit.updateSprName(sprName);
+				filename = filename.substring(0, filename.lastIndexOf(".")) + ".txt";
+				visit.updateSprName(filename);
 			} else {
-				String extension = sprName.substring(sprName.lastIndexOf('.'));
+				String extension = filename.substring(filename.lastIndexOf('.'));
 				File sprFile = new File(getSprDirPath(visit.getId()) + File.separator + "spr" + extension);
-				FileUtils.copyInputStreamToFile(detail.getInputStream(), sprFile);
-				visit.updateSprName(sprName);
+				FileUtils.copyInputStreamToFile(detail.getFileIn(), sprFile);
+				visit.updateSprName(filename);
 			}
 			
-			return new ResponseEvent<String>(sprName);
+			return new ResponseEvent<>(filename);
 		} catch (OpenSpecimenException ose) {
 			return ResponseEvent.error(ose);
 		} catch (Exception e) {
@@ -315,11 +341,11 @@ public class VisitServiceImpl implements VisitService, ObjectStateParamsResolver
 	public ResponseEvent<String> updateSprText(RequestEvent<SprDetail> req) {
 		try {
 			SprDetail detail = req.getPayload();
-			Visit visit = getVisit(detail.getVisitId(), null);
+			Visit visit = getVisit(detail.getId(), null);
 			
 			ensureUpdateSprRights(visit);
 			
-			File file = getSprFile(detail.getVisitId());
+			File file = getSprFile(detail.getId());
 			if (file == null) {
 				return ResponseEvent.serverError(VisitErrorCode.UNABLE_TO_LOCATE_SPR);
 			}
@@ -408,8 +434,6 @@ public class VisitServiceImpl implements VisitService, ObjectStateParamsResolver
 		return (LabelPrinter<Visit>)OpenSpecimenAppCtxProvider.getAppCtx().getBean(beanName);
 	}
 
-
-
 	@PlusTransactional
 	@Override
 	public List<Visit> getVisitsByName(List<String> visitNames) {
@@ -491,7 +515,7 @@ public class VisitServiceImpl implements VisitService, ObjectStateParamsResolver
 		existing.setNameIfEmpty();
 		daoFactory.getVisitsDao().saveOrUpdate(existing);
 		existing.addOrUpdateExtension();
-		existing.prePrintLabels(prevStatus);
+		existing.printLabels(prevStatus);
 		return VisitDetail.from(existing, false, false);
 	}
 	
@@ -579,22 +603,16 @@ public class VisitServiceImpl implements VisitService, ObjectStateParamsResolver
 	}
 	
 	private String getSprDirPath(Long visitId) {
-		String path = cfgSvc.getStrSetting(
-				ConfigParams.MODULE,
-				ConfigParams.SPR_DIR,
-				getDefaultVisitSprDir());
-
+		String path = cfgSvc.getStrSetting(ConfigParams.MODULE, ConfigParams.SPR_DIR, getDefaultVisitSprDir());
 		return path + File.separator + visitId;
 	}
 	
 	private String getTextFromReq(SprDetail detail) {
-		String text = Utility.getString(detail.getInputStream(), detail.getContentType());
+		String text = Utility.getString(detail.getFileIn(), detail.getContentType());
 		
 		DocumentDeIdentifier deIdentifier = getSprDeIdentifier();
 		if (deIdentifier != null) {
-			Map<String, Object> props = Collections.<String, Object>singletonMap("visitId",
-					detail.getVisitId());
-			
+			Map<String, Object> props = Collections.singletonMap("visitId", detail.getId());
 			text = deIdentifier.deIdentify(text, props);
 		}
 		
@@ -665,5 +683,24 @@ public class VisitServiceImpl implements VisitService, ObjectStateParamsResolver
 				setSpecimenIds(specimenDetail.getChildren(), reqSpecimenMap);
 			}
 		}
+	}
+
+	private List<Visit> getVisitsToPrint(PrintVisitNameDetail printDetail) {
+		List<Visit> visits = null;
+		Object key = null;
+
+		if (CollectionUtils.isNotEmpty(printDetail.getVisitIds())) {
+			visits = daoFactory.getVisitsDao().getByIds(printDetail.getVisitIds());
+			key = printDetail.getVisitIds();
+		} else if (CollectionUtils.isNotEmpty(printDetail.getVisitNames())) {
+			visits = daoFactory.getVisitsDao().getByName(printDetail.getVisitNames());
+			key = printDetail.getVisitNames();
+		}
+
+		if (CollectionUtils.isEmpty(visits)) {
+			throw OpenSpecimenException.userError(VisitErrorCode.NO_VISITS_TO_PRINT, key);
+		}
+
+		return visits;
 	}
 }

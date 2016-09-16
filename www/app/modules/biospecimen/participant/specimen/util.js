@@ -5,6 +5,9 @@ angular.module('os.biospecimen.specimen')
       var spec = scope.aliquotSpec;
       var parent = scope.parentSpecimen;
       var extensionDetail = getExtensionDetail(scope);
+      if (!extensionDetail) {
+        extensionDetail = scope.aliquotSpec.extensionDetail;
+      }
 
       if (!!spec.qtyPerAliquot && !!spec.noOfAliquots) {
         var requiredQty = spec.qtyPerAliquot * spec.noOfAliquots;
@@ -67,8 +70,12 @@ angular.module('os.biospecimen.specimen')
     }
 
     function createDerivatives(scope) {
+      var extensionDetail = getExtensionDetail(scope);
+      if (extensionDetail) {
+        scope.derivative.extensionDetail = extensionDetail;
+      }
+
       var closeParent = scope.derivative.closeParent;
-      scope.derivative.extensionDetail = getExtensionDetail(scope);
       delete scope.derivative.closeParent;
 
       if (scope.derivative.createdOn.getTime() < scope.parentSpecimen.createdOn) {
@@ -117,6 +124,7 @@ angular.module('os.biospecimen.specimen')
         storageLocation: {},
         status: 'Collected',
         visitId: scope.visit.id,
+        cpId: scope.visit.cpId,
         pathology: scope.parentSpecimen.pathology,
         closeParent: false,
         createdOn : new Date(),
@@ -169,6 +177,25 @@ angular.module('os.biospecimen.specimen')
       return formCtrl.getFormData();
     }
 
+    function copyContainerName(src, array) {
+      if (!src.storageLocation || !src.storageLocation.name) {
+        return;
+      }
+
+      var containerName = src.storageLocation.name;
+      angular.forEach(array,
+        function(dst) {
+          if (src == dst || src.specimenClass != dst.specimenClass || src.type != dst.type) {
+            return;
+          }
+
+          if (!dst.storageLocation || containerName != dst.storageLocation.name) {
+            dst.storageLocation = {name: containerName};
+          }
+        }
+      );
+    }
+
     return {
       collectAliquots: collectAliquots,
 
@@ -180,6 +207,8 @@ angular.module('os.biospecimen.specimen')
 
       loadSpecimenTypes: loadSpecimenTypes,
 
-      loadPathologyStatuses: loadPathologyStatuses
+      loadPathologyStatuses: loadPathologyStatuses,
+
+      copyContainerName: copyContainerName
     }
   });

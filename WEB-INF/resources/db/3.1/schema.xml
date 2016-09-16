@@ -5,8 +5,10 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
 
   <changeSet author="ckhilosiya" id="Freeze/thaw cycles field for specimen">
+    <validCheckSum>7:941984992ac02bf48223f9308ff837e3</validCheckSum>
+    <validCheckSum>7:bec6b643d108d9e18f545324988e2d24</validCheckSum>
     <addColumn tableName="CATISSUE_SPECIMEN">
-      <column name="FREEZE_THAW_CYCLES" type="${mediumint.type}" defaultValue="0"/>
+      <column name="FREEZE_THAW_CYCLES" type="${mediumint.type}"/>
     </addColumn>
   </changeSet>
 
@@ -144,7 +146,7 @@
           inner join catissue_received_event_param re on re.identifier = rre.record_id
           left join (
             select
-              fre.object_id as specimen_id, min(fep.event_timestamp) as event_timestamp
+              fre.object_id as specimen_id, max(fep.event_timestamp) as event_timestamp
             from
               catissue_frozen_event_param fep
               inner join catissue_form_record_entry fre on fre.record_id = fep.identifier
@@ -158,7 +160,8 @@
         where
           s.parent_specimen_id is null and s.collection_status != 'Pending' and
           s.activity_status != 'Disabled' and c.activity_status != 'Disabled' and
-          c.collection_status = 'Collected';
+          c.collection_status = 'Collected' and cre.activity_status = 'ACTIVE' and
+          rre.activity_status = 'ACTIVE';
 
         set @num := 0, @parent := 0;
 
@@ -279,7 +282,7 @@
           inner join catissue_received_event_param re on re.identifier = rre.record_id
           left join (
             select
-              fre.object_id as specimen_id, min(fep.event_timestamp) as event_timestamp
+              fre.object_id as specimen_id, max(fep.event_timestamp) as event_timestamp
             from
               catissue_frozen_event_param fep
               inner join catissue_form_record_entry fre on fre.record_id = fep.identifier
@@ -293,7 +296,8 @@
         where
           s.parent_specimen_id is null and s.collection_status = ''Collected'' and
           s.activity_status != ''Disabled'' and c.activity_status != ''Disabled'' and
-          c.collection_status = ''Collected''';
+          c.collection_status = ''Collected'' and cre.activity_status = ''ACTIVE'' and 
+          rre.activity_status = ''ACTIVE''';
        
         execute immediate 'merge into tmp_specimen_stats us using (
           select 
@@ -800,5 +804,20 @@
         <constraints nullable="false"/>
       </column>
     </addColumn>
+  </changeSet>
+
+  <changeSet author="ckhilosiya" id="Remove default value set for specimen freeze thaw cycles column">
+    <dropDefaultValue tableName="CATISSUE_SPECIMEN" columnName="freeze_thaw_cycles"/>
+  </changeSet>
+
+  <changeSet author="ckhilosiya" id="Set freeze thaw cycles null for specimen who got default zero value">
+    <sql>
+      update
+        catissue_specimen
+      set
+        freeze_thaw_cycles = NULL
+      where
+        freeze_thaw_cycles = 0
+    </sql>
   </changeSet>
 </databaseChangeLog>

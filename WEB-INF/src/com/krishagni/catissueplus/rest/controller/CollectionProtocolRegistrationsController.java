@@ -3,8 +3,10 @@ package com.krishagni.catissueplus.rest.controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -24,8 +26,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolRegistrationDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.ConsentDetail;
-import com.krishagni.catissueplus.core.biospecimen.events.ConsentFormDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CprSummary;
+import com.krishagni.catissueplus.core.biospecimen.events.FileDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.RegistrationQueryCriteria;
 import com.krishagni.catissueplus.core.biospecimen.repository.CprListCriteria;
 import com.krishagni.catissueplus.core.biospecimen.services.CollectionProtocolRegistrationService;
@@ -128,6 +130,55 @@ public class CollectionProtocolRegistrationsController {
 		return resp.getPayload();
 	}
 
+	@RequestMapping(method = RequestMethod.GET, value = "/count")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public Map<String, Long> getRegistrationsCount(
+			@RequestParam(value = "cpId",             required = true)
+			Long cpId,
+			
+			@RequestParam(value = "registrationDate", required = false)
+			@DateTimeFormat(pattern="yyyy-MM-dd")
+			Date registrationDate,
+			
+			@RequestParam(value = "query",            required = false)
+			String searchStr,
+			
+			@RequestParam(value = "name",             required = false)
+			String name,
+			
+			@RequestParam(value = "ppid",             required = false)
+			String ppid,
+
+			@RequestParam(value = "uid",             required = false)
+			String uid,
+			
+			@RequestParam(value = "participantId",    required = false)
+			String participantId,
+			
+			@RequestParam(value = "empi",             required = false)
+			String empi,
+			
+			@RequestParam(value = "dob",              required = false) 
+			@DateTimeFormat(pattern="yyyy-MM-dd")
+			Date dob) {
+
+		CprListCriteria crit = new CprListCriteria()
+			.cpId(cpId)
+			.registrationDate(registrationDate)
+			.query(searchStr)
+			.name(name)
+			.ppid(ppid)
+			.uid(uid)
+			.participantId(participantId)
+			.dob(dob)
+			.includePhi(true);
+		
+		ResponseEvent<Long> resp = cpSvc.getRegisteredParticipantsCount(getRequest(crit));
+		resp.throwErrorIfUnsuccessful();
+		return Collections.singletonMap("count", resp.getPayload());
+	}
+
 	@RequestMapping(method = RequestMethod.GET, value = "/{cprId}")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
@@ -203,14 +254,13 @@ public class CollectionProtocolRegistrationsController {
 	@ResponseBody
 	public String uploadConsentForm(@PathVariable("id") Long cprId, @PathVariable("file") MultipartFile file) 
 	throws IOException {
-		ConsentFormDetail detail = new ConsentFormDetail();
-		detail.setCprId(cprId);
-		detail.setFileName(file.getOriginalFilename());
-		detail.setInputStream(file.getInputStream());
+		FileDetail detail = new FileDetail();
+		detail.setId(cprId);
+		detail.setFilename(file.getOriginalFilename());
+		detail.setFileIn(file.getInputStream());
 		
 		ResponseEvent<String> resp = cprSvc.uploadConsentForm(getRequest(detail));
 		resp.throwErrorIfUnsuccessful();
-
 		return resp.getPayload();
 	}
 
@@ -223,7 +273,6 @@ public class CollectionProtocolRegistrationsController {
 		
 		ResponseEvent<Boolean> resp = cprSvc.deleteConsentForm(getRequest(crit));
 		resp.throwErrorIfUnsuccessful();
-
 		return resp.getPayload();
 	}
 	

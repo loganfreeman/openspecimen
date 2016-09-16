@@ -1,12 +1,14 @@
 
 angular.module('os.administrative.user.list', ['os.administrative.models'])
   .controller('UserListCtrl', function(
-    $scope, $state, $rootScope, 
-    osRightDrawerSvc, Institute, User, PvManager, Util) {
+    $scope, $state, $rootScope, $modal,
+    osRightDrawerSvc, Institute, User, PvManager, Util, Alerts, ListPagerOpts) {
 
+    var pagerOpts;    
     var pvInit = false;
 
     function init() {
+      pagerOpts = $scope.pagerOpts = new ListPagerOpts({listSizeGetter: getUsersCount});
       loadUsers({includeStats: true});
       initPvsAndFilterOpts();
     }
@@ -75,13 +77,33 @@ angular.module('os.administrative.user.list', ['os.administrative.models'])
           osRightDrawerSvc.open();
         }
 
-        $scope.users = result; 
+        $scope.users = result;
+        pagerOpts.refreshOpts(result);
       });
     };
+
+    function getUsersCount() {
+      return User.getCount($scope.userFilterOpts)
+    }
     
     $scope.showUserOverview = function(user) {
       $state.go('user-detail.overview', {userId:user.id});
     };
+
+    $scope.broadcastAnnouncement = function() {
+      $modal.open({
+        templateUrl: 'modules/administrative/user/announcement.html',
+        controller: 'AnnouncementCtrl'
+      }).result.then(
+        function(announcement) {
+          User.broadcastAnnouncement(announcement).then(
+            function(resp) {
+              Alerts.success('user.announcement.success');
+            }
+          );
+        }
+      );
+    }
 
     init();
   });

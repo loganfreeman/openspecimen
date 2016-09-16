@@ -1,10 +1,15 @@
 package com.krishagni.catissueplus.core.biospecimen.domain;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.krishagni.catissueplus.core.administrative.domain.User;
@@ -18,10 +23,14 @@ public class SpecimenList {
 	private User owner;
 
 	private String description;
+
+	private Date createdOn;
+
+	private Date lastUpdatedOn;
 	
-	private Set<User> sharedWith = new HashSet<User>();
+	private Set<User> sharedWith = new HashSet<>();
 	
-	private Set<Specimen> specimens = new HashSet<Specimen>();
+	private Set<Specimen> specimens = new HashSet<>();
 	
 	private Date deletedOn;
 
@@ -57,6 +66,22 @@ public class SpecimenList {
 		this.description = description;
 	}
 
+	public Date getCreatedOn() {
+		return createdOn;
+	}
+
+	public void setCreatedOn(Date createdOn) {
+		this.createdOn = createdOn;
+	}
+
+	public Date getLastUpdatedOn() {
+		return lastUpdatedOn;
+	}
+
+	public void setLastUpdatedOn(Date lastUpdatedOn) {
+		this.lastUpdatedOn = lastUpdatedOn;
+	}
+
 	public Set<User> getSharedWith() {
 		return sharedWith;
 	}
@@ -83,6 +108,7 @@ public class SpecimenList {
 
 	public void addSpecimens(List<Specimen> specimens) {
 		this.specimens.addAll(specimens);
+		setLastUpdatedOn(Calendar.getInstance().getTime());
 	}
 	
 	public void updateSpecimens(List<Specimen> specimens) {
@@ -93,22 +119,32 @@ public class SpecimenList {
 				this.specimens.add(specimen);
 			}
 		}
+
+		setLastUpdatedOn(Calendar.getInstance().getTime());
 	}
 	
 	public void removeSpecimens(List<Specimen> specimens) {
 		this.specimens.removeAll(specimens);
+		setLastUpdatedOn(Calendar.getInstance().getTime());
+	}
+
+	public boolean contains(Specimen specimen) {
+		return specimens.contains(specimen);
 	}
 
 	public void clear() {
 		specimens.clear();
+		setLastUpdatedOn(Calendar.getInstance().getTime());
 	}
 
 	public void addSharedUsers(List<User> users) {
 		sharedWith.addAll(users);
+		setLastUpdatedOn(Calendar.getInstance().getTime());
 	}
 	
 	public void removeSharedUsers(List<User> users) {
 		sharedWith.removeAll(users);
+		setLastUpdatedOn(Calendar.getInstance().getTime());
 	}
 	
 	public void updateSharedUsers(Collection<User> users) {
@@ -119,6 +155,8 @@ public class SpecimenList {
 				sharedWith.add(user);
 			}
 		}
+
+		setLastUpdatedOn(Calendar.getInstance().getTime());
 	}
 		
 	public boolean canUserAccess(Long userId) {
@@ -142,11 +180,17 @@ public class SpecimenList {
 		setDescription(specimenList.getDescription());
 		setSpecimens(specimenList.getSpecimens());
 		updateSharedUsers(specimenList.getSharedWith());
+		setLastUpdatedOn(Calendar.getInstance().getTime());
 	}
 
 	public void delete() {
 		setName(Utility.getDisabledValue(getName(), 255));
+		setLastUpdatedOn(Calendar.getInstance().getTime());
 		setDeletedOn(Calendar.getInstance().getTime());
+	}
+
+	public int size() {
+		return specimens.size();
 	}
 
 	public boolean isDefaultList(User user) {
@@ -157,6 +201,10 @@ public class SpecimenList {
 		return isDefaultList(getOwner());
 	}
 
+	public List<Specimen> getSpecimensGroupedByAncestors() {
+		return groupByAncestors(specimens);
+	}
+
 	public static String getDefaultListName(User user) {
 		return getDefaultListName(user.getId());
 	}
@@ -164,4 +212,53 @@ public class SpecimenList {
 	public static String getDefaultListName(Long userId) {
 		return String.format("$$$$user_%d", userId);
 	}
+
+	public static List<Specimen> groupByAncestors(Collection<Specimen> spmns) {
+		if (spmns == null) {
+			return Collections.emptyList();
+		}
+
+		Map<String, Set<Specimen>> spmnsMap = new LinkedHashMap<>();
+		for (Specimen spmn : spmns) {
+			while (spmn != null) {
+				String parentLabel = null;
+				if (spmn.getParentSpecimen() != null) {
+					parentLabel = spmn.getParentSpecimen().getLabel();
+				}
+
+				Set<Specimen> childSpmns = spmnsMap.get(parentLabel);
+				if (childSpmns == null) {
+					childSpmns = new LinkedHashSet<>();
+					spmnsMap.put(parentLabel, childSpmns);
+				}
+
+				childSpmns.add(spmn);
+				spmn = spmn.getParentSpecimen();
+			}
+		}
+
+		List<Specimen> result = new ArrayList<>();
+		addSpecimens(spmnsMap, null, new HashSet<>(spmns), result);
+		return result;
+	}
+
+	private static void addSpecimens(Map<String, Set<Specimen>> spmnsMap, String parentLabel, Set<Specimen> listSpecimens, List<Specimen> result) {
+		Set<Specimen> childSpmns = spmnsMap.get(parentLabel);
+		if (childSpmns == null || listSpecimens.isEmpty()) {
+			return;
+		}
+
+		for (Specimen childSpmn : childSpmns) {
+			if (listSpecimens.remove(childSpmn)) {
+				result.add(childSpmn);
+			}
+
+			if (listSpecimens.isEmpty()) {
+				break;
+			}
+
+			addSpecimens(spmnsMap, childSpmn.getLabel(), listSpecimens, result);
+		}
+	}
+
 }

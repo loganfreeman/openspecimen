@@ -6,6 +6,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.hibernate.envers.AuditTable;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.RelationTargetAuditMode;
+
 import com.krishagni.catissueplus.core.administrative.domain.factory.DistributionProtocolErrorCode;
 import com.krishagni.catissueplus.core.biospecimen.domain.BaseExtensionEntity;
 import com.krishagni.catissueplus.core.common.CollectionUpdater;
@@ -15,7 +19,11 @@ import com.krishagni.catissueplus.core.common.util.Status;
 import com.krishagni.catissueplus.core.common.util.Utility;
 import com.krishagni.catissueplus.core.de.domain.SavedQuery;
 
+@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
+@AuditTable(value = "CAT_DISTRIBUTION_PROTOCOL_AUD")
 public class DistributionProtocol extends BaseExtensionEntity {
+	public static final String EXTN = "DistributionProtocolExtension";
+
 	private static final String ENTITY_NAME = "distribution_protocol";
 
 	private Institute institute;
@@ -214,6 +222,6 @@ public class DistributionProtocol extends BaseExtensionEntity {
 
 	@Override
 	public String getEntityType() {
-		return "DistributionProtocolExtension";
+		return EXTN;
 	}
 }

@@ -83,29 +83,7 @@ public class StorageContainerServiceImpl implements StorageContainerService, Obj
 	@PlusTransactional
 	public ResponseEvent<List<StorageContainerSummary>> getStorageContainers(RequestEvent<StorageContainerListCriteria> req) {
 		try {			
-			StorageContainerListCriteria crit = req.getPayload();
-			Set<Long> siteIds = AccessCtrlMgr.getInstance().getReadAccessContainerSites();
-			if (siteIds != null && siteIds.isEmpty()) {
-				return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
-			}
-
-			if (CollectionUtils.isNotEmpty(crit.cpIds())) {
-				//
-				// TODO: what if cp site IDs is empty because of invalid cp ids
-				// return error
-				//
-				Set<Long> cpSiteIds = new HashSet<Long>(daoFactory.getCollectionProtocolDao().getSiteIdsByCpIds(crit.cpIds()));	
-				if (siteIds == null) {
-					siteIds = cpSiteIds;
-				} else {
-					siteIds =new HashSet<Long>(CollectionUtils.intersection(siteIds, cpSiteIds));
-				}
-			}
-
-			if (siteIds != null) {
-				crit.siteIds(siteIds);
-			}
-			
+			StorageContainerListCriteria crit = addContainerListCriteria(req.getPayload());
 			List<StorageContainer> containers = daoFactory.getStorageContainerDao().getStorageContainers(crit);
 			List<StorageContainerSummary> result = StorageContainerSummary.from(containers, crit.includeChildren());
 			return ResponseEvent.response(result);
@@ -115,7 +93,20 @@ public class StorageContainerServiceImpl implements StorageContainerService, Obj
 			return ResponseEvent.serverError(e);
 		}
 	}
-	
+
+	@Override
+	@PlusTransactional
+	public ResponseEvent<Long> getStorageContainersCount(RequestEvent<StorageContainerListCriteria> req) {
+		try {
+			StorageContainerListCriteria crit = addContainerListCriteria(req.getPayload());
+			return ResponseEvent.response(daoFactory.getStorageContainerDao().getStorageContainersCount(crit));
+		} catch (OpenSpecimenException ose) {
+			return ResponseEvent.error(ose);
+		} catch (Exception e) {
+			return ResponseEvent.serverError(e);
+		}
+	}
+
 	@Override
 	@PlusTransactional
 	public ResponseEvent<StorageContainerDetail> getStorageContainer(RequestEvent<ContainerQueryCriteria> req) {
@@ -134,15 +125,9 @@ public class StorageContainerServiceImpl implements StorageContainerService, Obj
 	@PlusTransactional
 	public ResponseEvent<List<StorageContainerPositionDetail>> getOccupiedPositions(RequestEvent<Long> req) {
 		try {
-			Long containerId = req.getPayload();			
-			StorageContainer container = daoFactory.getStorageContainerDao().getById(containerId);
-			if (container == null) {
-				return ResponseEvent.userError(StorageContainerErrorCode.NOT_FOUND);
-			}
-			
+			StorageContainer container = getContainer(req.getPayload(), null);
 			AccessCtrlMgr.getInstance().ensureReadContainerRights(container);
-			Set<StorageContainerPosition> positions = container.getOccupiedPositions();
-			return ResponseEvent.response(StorageContainerPositionDetail.from(positions));
+			return ResponseEvent.response(StorageContainerPositionDetail.from(container.getOccupiedPositions()));
 		} catch (OpenSpecimenException ose) {
 			return ResponseEvent.error(ose);
 		} catch (Exception e) {
@@ -186,18 +171,8 @@ public class StorageContainerServiceImpl implements StorageContainerService, Obj
 	public ResponseEvent<Boolean> isAllowed(RequestEvent<PositionTenantDetail> req) {
 		try {
 			PositionTenantDetail detail = req.getPayload();
-			StorageContainer container = null;
-			
-			if (detail.getContainerId() != null) {
-				container = daoFactory.getStorageContainerDao().getById(detail.getContainerId());
-			} else if (StringUtils.isNotBlank(detail.getContainerName())) {
-				container = daoFactory.getStorageContainerDao().getByName(detail.getContainerName());
-			}
-			
-			if (container == null) {
-				return ResponseEvent.userError(StorageContainerErrorCode.NOT_FOUND);
-			}
-			
+
+			StorageContainer container = getContainer(detail.getContainerId(), detail.getContainerName());
 			AccessCtrlMgr.getInstance().ensureReadContainerRights(container);
 			
 			CollectionProtocol cp = new CollectionProtocol();
@@ -258,11 +233,7 @@ public class StorageContainerServiceImpl implements StorageContainerService, Obj
 	@PlusTransactional
 	public ResponseEvent<List<DependentEntityDetail>> getDependentEntities(RequestEvent<Long> req) {
 		try {
-			StorageContainer existing = daoFactory.getStorageContainerDao().getById(req.getPayload());
-			if (existing == null) {
-				return ResponseEvent.userError(StorageContainerErrorCode.NOT_FOUND);
-			}
-			
+			StorageContainer existing = getContainer(req.getPayload(), null);
 			return ResponseEvent.response(existing.getDependentEntities());
 		} catch (Exception e) {
 			return ResponseEvent.serverError(e);
@@ -273,11 +244,7 @@ public class StorageContainerServiceImpl implements StorageContainerService, Obj
 	@PlusTransactional
 	public ResponseEvent<StorageContainerDetail> deleteStorageContainer(RequestEvent<Long> req) {
 		try {
-			StorageContainer existing = daoFactory.getStorageContainerDao().getById(req.getPayload());
-			if (existing == null) {
-				return ResponseEvent.userError(StorageContainerErrorCode.NOT_FOUND);
-			}
-			
+			StorageContainer existing = getContainer(req.getPayload(), null);
 			AccessCtrlMgr.getInstance().ensureDeleteContainerRights(existing);
 			existing.delete();
 			return ResponseEvent.response(StorageContainerDetail.from(existing));
@@ -359,6 +326,32 @@ public class StorageContainerServiceImpl implements StorageContainerService, Obj
 		}
 
 		return daoFactory.getStorageContainerDao().getContainerIds(key, value);
+	}
+
+	private StorageContainerListCriteria addContainerListCriteria(StorageContainerListCriteria crit) {
+		Set<Long> siteIds = AccessCtrlMgr.getInstance().getReadAccessContainerSites();
+		if (siteIds != null && siteIds.isEmpty()) {
+			throw OpenSpecimenException.userError(RbacErrorCode.ACCESS_DENIED);
+		}
+
+		if (CollectionUtils.isNotEmpty(crit.cpIds())) {
+			//
+			// TODO: what if cp site IDs is empty because of invalid cp ids
+			// return error
+			//
+			Set<Long> cpSiteIds = new HashSet<Long>(daoFactory.getCollectionProtocolDao().getSiteIdsByCpIds(crit.cpIds()));	
+			if (siteIds == null) {
+				siteIds = cpSiteIds;
+			} else {
+				siteIds =new HashSet<Long>(CollectionUtils.intersection(siteIds, cpSiteIds));
+			}
+		}
+
+		if (siteIds != null) {
+			crit.siteIds(siteIds);
+		}
+
+		return crit;
 	}
 
 	private StorageContainer getContainer(ContainerQueryCriteria crit) {

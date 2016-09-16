@@ -20,6 +20,9 @@
   <property name="smallint.type" value="smallint" dbms="mysql" />
   <property name="smallint.type" value="number(5,0)" dbms="oracle" />
 
+  <property name="tinyint.type" value="tinyint" dbms="mysql"/>
+  <property name="tinyint.type" value="number(3, 0)" dbms="oracle"/>
+
   <property name="text.type" value="varchar" dbms="mysql" />
   <property name="text.type" value="varchar2" dbms="oracle" />
 
@@ -39,4 +42,7 @@
 
   <property name="decimal.type" value="decimal" dbms="mysql"/>
   <property name="decimal.type" value="number" dbms="oracle"/>
+  
+  <property name="now" value="now()"   dbms="mysql"/>
+  <property name="now" value="sysdate" dbms="oracle"/>
 </databaseChangeLog>

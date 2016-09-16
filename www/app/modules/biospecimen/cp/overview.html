@@ -2,6 +2,14 @@
   <div class="col-xs-8">
     <ul class="os-key-values os-two-cols" os-inline-editors on-save="editCp">
       <li class="item">
+        <strong class="key key-sm" translate="cp.title">Title:</strong>
+        <os-inline-edit editor="stEditor" name="title" class="value value-md" value="cp.title">
+          <span ng-if="stEditor.isDisplayMode()">{{stEditor.viewValue}}</span>
+          <input ng-if="stEditor.isEditMode()" class="form-control" type="text" ng-model="stEditor.editValue">
+        </os-inline-edit>
+      </li>
+
+      <li class="item">
         <strong class="key key-sm" translate="cp.short_title">Short Title:</strong>
         <os-inline-edit editor="stEditor" name="shortTitle" class="value value-md" value="cp.shortTitle">
           <span ng-if="stEditor.isDisplayMode()">{{stEditor.viewValue}}</span>
@@ -44,14 +52,6 @@
       </li>
 
       <li class="item">
-        <strong class="key key-sm" translate="cp.desc_url">Description URL:</strong>
-        <os-inline-edit editor="urlEditor" name="descUrl" class="value value-md" value="cp.descriptionUrl">
-          <span ng-if="urlEditor.isDisplayMode()">{{urlEditor.viewValue | osNoValue}}</span>
-          <input ng-if="urlEditor.isEditMode()" type="text" ng-model="urlEditor.editValue" class="form-control" >
-        </os-inline-edit>
-      </li>
-
-      <li class="item">
         <strong class="key key-sm" translate="cp.ethics_approval_id">Ethics Approval ID:</strong>
         <os-inline-edit editor="irbEditor" name="irbId" class="value value-md" value="cp.irbId">
           <span ng-if="irbEditor.isDisplayMode()">{{irbEditor.viewValue | osNoValue}}</span>
@@ -72,94 +72,32 @@
         <strong class="key key-sm" translate="cp.anticipated_participant_count">Expected Registrations</strong>
         <span class="value value-md">{{cp.anticipatedParticipantsCount | osNoValue}}</span>
       </li>
+
+      <li class="item">
+        <strong class="key key-sm" translate="cp.sop_document">SOP Document</strong>
+        <span class="value value-md" ng-switch on="!cp.sopDocumentUrl && !cp.sopDocumentName">
+          <span ng-switch-when="true" translate="common.not_specified">
+            Not Specified
+          </span>
+          <span ng-switch-default>
+            <span ng-if="cp.sopDocumentUrl">
+              <a ng-href="{{cp.sopDocumentUrl}}" target="_blank">
+                <span>{{cp.sopDocumentUrl}}</span>
+              </a>
+            </span>
+            <span ng-if="cp.sopDocumentName">
+              <a ng-href="{{cp.getSopDocDownloadUrl()}}" target="_blank">
+                <span>{{cp.sopDocumentName}}</span>
+              </a>
+            </span>
+          </span>
+        </span>
+      </li>
     </ul>
 
     <div ng-if="!!cp.extensionDetail">
       <div os-extension-overview ext-object="cp.extensionDetail" show-column="2"></div>
     </div>
-
-    <div class="os-section os-line-section">
-      <strong class="key key-sm" translate="cp.label_formats">Label Formats</strong>
-      <div>
-        <ul class="os-key-values os-one-col">
-          <li class="item">
-            <strong class="key key-sm" translate="cp.label_format.ppid">PPID Format</strong>
-            <span class="value value-md">{{cp.ppidFmt | osNoValue}}</span>
-          </li>
-
-          <li class="item">
-            <strong class="key key-sm" translate="cp.label_format.visit">Visit</strong>
-            <span class="value value-md">{{cp.visitNameFmt | osNoValue}}</span>
-          </li>
-
-          <li class="item">
-            <strong class="key key-sm" translate="cp.label_format.specimen">Specimen</strong>
-            <span class="value value-md">{{cp.specimenLabelFmt | osNoValue}}</span>
-          </li>
-
-          <li class="item">
-            <strong class="key key-sm" translate="cp.label_format.aliquot">Aliquot</strong>
-            <span class="value value-md">{{cp.aliquotLabelFmt | osNoValue}}</span>
-          </li>
-
-          <li class="item">
-            <strong class="key key-sm" translate="cp.label_format.derivative">Derivative</strong>
-            <span class="value value-md">{{cp.derivativeLabelFmt | osNoValue}}</span>
-          </li>
-
-          <li class="item">
-            <strong class="key key-sm" translate="cp.label_format.manual">User Inputs Allowed for</strong>
-            <span class="value value-md">{{userInputLabels | osNoValue}}</span>
-          </li>
-
-          <li class="item">
-            <strong class="key key-sm" translate="cp.pre_print_spmn_labels">Pre Print Specimen Labels</strong>
-            <span class="value value-md">{{'cp.spmn_label_pre_print_modes.' + cp.spmnLabelPrePrintMode | translate}}</span>
-          </li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="os-section os-line-section">
-      <strong class="key key-sm" translate="cp.print_settings">Print Settings</strong>
-      <div>
-        <span ng-if="cp.spmnLabelPrintSettings.length == 0" translate="common.none">None</span>
-        <table class="os-table os-table-muted-hdr os-border" ng-if="cp.spmnLabelPrintSettings.length > 0">
-          <thead class="os-table-head">
-            <tr class="row">
-              <td class="col os-col-40">
-                <span translate="cp.lineage">Lineage</span>
-              </td>
-              <td class="col os-col-40">
-                <span translate="cp.when_to_print">When to Print</span>
-              </td>
-              <td class="col os-col-20">
-                <span translate="cp.copies">Copies</span>
-              </td>
-            </tr>
-          </thead>
-          <tbody class="os-table-body">
-            <tr class="row" ng-repeat="setting in cp.spmnLabelPrintSettings">
-              <td class="col">
-                <span>{{'cp.spmn_lineages.' + setting.lineage | translate}}</span>
-              </td>
-              <td class="col" ng-switch on="!!setting.printMode">
-                <span ng-switch-when="true">
-                  {{'srs.spmn_label_auto_print_modes.' + setting.printMode | translate}}
-                </span>
-                <span ng-switch-default translate="common.not_specified">
-                  Not Specified
-                </span>
-              </td>
-              <td class="col">
-                <span>{{setting.copies | osNoValue}}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  
   </div>
 
   <!-- div class="col-xs-4">

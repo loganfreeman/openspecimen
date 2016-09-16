@@ -135,6 +135,7 @@
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.visit.VisitUniqueIdLabelToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.visit.VisitYearLabelToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.visit.VisitYear2LabelToken"/>
+        <bean class="com.krishagni.catissueplus.core.biospecimen.label.visit.EventUniqueIdLabelToken"/>
         <ref bean="extnPvLabelToken"/>
       </list>
     </property>
@@ -176,10 +177,12 @@
   </bean>
   
   <bean id="cpSvc" class="com.krishagni.catissueplus.core.biospecimen.services.impl.CollectionProtocolServiceImpl">
+    <property name="taskExecutor" ref="taskExecutor"/>
     <property name="cpFactory" ref="cpFactory"/>
     <property name="cpeFactory" ref="cpeFactory"/>
     <property name="srFactory" ref="srFactory"/>
     <property name="rbacSvc" ref="rbacSvc"/>
+    <property name="emailService" ref="emailService"/>
     <property name="daoFactory" ref="biospecimenDaoFactory"/>
   </bean>
   
@@ -227,6 +230,7 @@
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.cpr.CpUniqueIdPpidToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.cpr.CpCodePpidToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.cpr.CpSiteCodePpidToken"/>
+        <bean class="com.krishagni.catissueplus.core.biospecimen.label.cpr.UniqueIdPpidToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.cpr.SiteCodePpidToken"/>
       </list>
     </property>
@@ -294,14 +298,8 @@
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.VisitNameToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.PpidSpecTypeLabelToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.VisitSpecTypeLabelToken"/>
-        <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.SpecimenTypeLabelToken">
-          <property name="cfgSvc" ref="cfgSvc"/>
-          <property name="defaultAbbrFile" value="classpath:/com/krishagni/catissueplus/core/biospecimen/specimen-type-abbr.csv"/>
-        </bean>
-        <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.SpecimenPathologyStatusToken">
-          <property name="cfgSvc" ref="cfgSvc"/>
-          <property name="defaultAbbrFile" value="classpath:/com/krishagni/catissueplus/core/biospecimen/specimen-path-status-abbr.csv"/>
-        </bean>
+        <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.SpecimenTypeLabelToken"/>
+        <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.SpecimenPathologyStatusToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.SrCodeLabelToken"/>
         <bean class="com.krishagni.catissueplus.core.biospecimen.label.specimen.PpidUniqueIdLabelToken"/>
         <ref bean="extnPvLabelToken"/>
@@ -332,6 +330,28 @@
   
   <bean id="formSvc" class="com.krishagni.catissueplus.core.de.services.impl.FormServiceImpl">
     <property name="formDao" ref="formDao"/>
+    <property name="ctxtProcs">
+      <map>
+        <entry key="ParticipantExtension">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
+        </entry>
+        <entry key="VisitExtension">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
+        </entry>
+        <entry key="SpecimenExtension">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
+        </entry>
+        <entry key="SiteExtension">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
+        </entry>
+        <entry key="CollectionProtocolExtension">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
+        </entry>
+        <entry key="DistributionProtocolExtension">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
+        </entry>
+      </map>
+    </property>
   </bean>
   
   <bean id="specimenEventsSvc" class="com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenEventsServiceImpl">
@@ -436,7 +456,7 @@
     <property name="daoFactory" ref="biospecimenDaoFactory"/>
     <property name="distributionProtocolFactory" ref="distributionProtocolFactory" />
     <property name="dprFactory" ref="dpRequirementFactory"/>
-    <property name="formDao" ref="formDao"/>
+    <property name="formSvc" ref="formSvc"/>
   </bean>
 	
   <bean id="distributionFactory" class="com.krishagni.catissueplus.core.administrative.domain.factory.impl.DistributionOrderFactoryImpl">
@@ -491,11 +511,16 @@
 
   <bean id="appCtxProvider" class="com.krishagni.catissueplus.core.common.OpenSpecimenAppCtxProvider"/>
   
-  <security:authentication-manager alias="authenticationManager">
+  <security:authentication-manager alias="authManager">
     <security:authentication-provider user-service-ref="userSvc" >
        <security:password-encoder ref="passwordEncoder"></security:password-encoder>
     </security:authentication-provider>
   </security:authentication-manager>
+  
+  <bean id="samlFilter" class="com.krishagni.catissueplus.rest.filter.SamlFilter">
+    <property name="daoFactory" ref="biospecimenDaoFactory"/>
+    <property name="authService" ref="userAuthService"/>
+  </bean>
   
   <bean id="authTokenFilter" class="com.krishagni.catissueplus.rest.filter.AuthTokenFilter">
     <property name="authService" ref="userAuthService"/>
@@ -658,7 +683,6 @@
     <property name="schemaResources">
       <list>
         <value>com/krishagni/catissueplus/core/administrative/schema/institute.xml</value>
-        <value>com/krishagni/catissueplus/core/administrative/schema/site.xml</value>
         <value>com/krishagni/catissueplus/core/administrative/schema/user.xml</value>
         <value>com/krishagni/catissueplus/core/administrative/schema/user-roles.xml</value>
         <value>com/krishagni/catissueplus/core/administrative/schema/container.xml</value>
@@ -667,14 +691,6 @@
         <value>com/krishagni/catissueplus/core/biospecimen/schema/cp.xml</value>
         <value>com/krishagni/catissueplus/core/biospecimen/schema/cpe.xml</value>
         <value>com/krishagni/catissueplus/core/biospecimen/schema/sr.xml</value>
-        <value>com/krishagni/catissueplus/core/biospecimen/schema/cpr.xml</value>
-        <value>com/krishagni/catissueplus/core/biospecimen/schema/participant.xml</value>
-        <value>com/krishagni/catissueplus/core/biospecimen/schema/consent.xml</value>
-        <value>com/krishagni/catissueplus/core/biospecimen/schema/visit.xml</value>
-        <value>com/krishagni/catissueplus/core/biospecimen/schema/specimen.xml</value>
-        <value>com/krishagni/catissueplus/core/biospecimen/schema/specimen-derivative.xml</value>
-        <value>com/krishagni/catissueplus/core/biospecimen/schema/specimen-aliquot.xml</value>
-        <value>com/krishagni/catissueplus/core/biospecimen/schema/master-specimen.xml</value>
       </list>
     </property>
 
@@ -683,6 +699,54 @@
         <entry key="extensions">
           <bean class="com.krishagni.catissueplus.core.de.services.impl.ExtensionSchemaBuilder">
             <property name="formDao" ref="formDao"/>
+          </bean>
+        </entry>
+        <entry key="site">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.CustomFieldsSchemaBuilder">
+            <property name="templateService" ref="templateService"/>
+            <property name="schemaResource"  value="com/krishagni/catissueplus/core/administrative/schema/site.xml"/>
+          </bean>
+        </entry>
+        <entry key="cpr">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.CustomFieldsSchemaBuilder">
+            <property name="templateService" ref="templateService"/>
+            <property name="schemaResource"  value="com/krishagni/catissueplus/core/biospecimen/schema/cpr.xml"/>
+          </bean>
+        </entry>
+        <entry key="consent">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.CustomFieldsSchemaBuilder">
+            <property name="templateService" ref="templateService"/>
+            <property name="schemaResource"  value="com/krishagni/catissueplus/core/biospecimen/schema/consent.xml"/>
+          </bean>
+        </entry>
+        <entry key="visit">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.CustomFieldsSchemaBuilder">
+            <property name="templateService" ref="templateService"/>
+            <property name="schemaResource"  value="com/krishagni/catissueplus/core/biospecimen/schema/visit.xml"/>
+          </bean>
+        </entry>
+        <entry key="specimen">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.CustomFieldsSchemaBuilder">
+            <property name="templateService" ref="templateService"/>
+            <property name="schemaResource"  value="com/krishagni/catissueplus/core/biospecimen/schema/specimen.xml"/>
+          </bean>
+        </entry>
+        <entry key="specimenDerivative">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.CustomFieldsSchemaBuilder">
+            <property name="templateService" ref="templateService"/>
+            <property name="schemaResource"  value="com/krishagni/catissueplus/core/biospecimen/schema/specimen-derivative.xml"/>
+          </bean>
+        </entry>
+        <entry key="specimenAliquot">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.CustomFieldsSchemaBuilder">
+            <property name="templateService" ref="templateService"/>
+            <property name="schemaResource"  value="com/krishagni/catissueplus/core/biospecimen/schema/specimen-aliquot.xml"/>
+          </bean>
+        </entry>
+        <entry key="masterSpecimen">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.CustomFieldsSchemaBuilder">
+            <property name="templateService" ref="templateService"/>
+            <property name="schemaResource"  value="com/krishagni/catissueplus/core/biospecimen/schema/master-specimen.xml"/>
           </bean>
         </entry>
       </map>

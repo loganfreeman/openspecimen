@@ -32,6 +32,19 @@ body {
   width: 235px;
   padding: 2.5px;
   flex-grow: 0.25;
+  position: relative;
+}
+
+.os-navbar .logo .deploy-env {
+  font-size: 12px;
+  color: #fff;
+  background-color: #c33;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-block;
+  position: absolute;
+  top: 7px;
+  margin-left: 6px;
 }
 
 .os-navbar .search {
@@ -300,6 +313,7 @@ h4 + .btn-group {
   left: inherit;
 }
 
+.os-page-hdr + .os-container-wrapper .container,
 .os-page-hdr + .container {
   padding-top: 20px;
   position: absolute;
@@ -681,7 +695,8 @@ h4.os-sub-section-title, h5.os-sub-section-title, h6.os-sub-section-title {
 .os-btn-transparent {
   background: none;
   border: none;
-  padding: 0px;
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 .os-btn-transparent:focus {
@@ -836,10 +851,14 @@ h4.os-sub-section-title, h5.os-sub-section-title, h6.os-sub-section-title {
   margin-bottom: 0px;
 }
 
-.os-ellipsis {
+.os-md-input .os-value, .os-ellipsis {
   overflow:hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.os-md-input .os-value {
+  display: block;
 }
 
 /**
@@ -1158,3 +1177,37 @@ h4.os-sub-section-title, h5.os-sub-section-title, h6.os-sub-section-title {
   padding-top: 5px!important;
   padding-bottom: 5px!important;
 }
+
+.os-bottom-border {
+  padding-bottom: 5px;
+  border-bottom: 2px solid #ddd;
+}
+
+.os-list-pager {
+  position: relative;
+  bottom: 10px;
+}
+
+/*** START: time picker popup spinner fixes ***/
+.icon-chevron-up, .icon-chevron-down {
+  display: inline-block;
+  font: normal normal normal 14px/1 FontAwesome;
+  font-size: inherit;
+  text-rendering: auto;
+  font-smoothing: antialiased;
+  font-smoothing: grayscale;
+}
+
+.icon-chevron-up:before {
+  content: "\f077";
+}
+
+.icon-chevron-down:before {
+  content: "\f078";
+}
+
+.bootstrap-timepicker-widget.timepicker-orient-bottom:before {
+  border-top: 7px solid #fff!important;
+}
+
+/*** END: time picker popup spinner fixes ***/

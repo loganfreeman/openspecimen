@@ -42,6 +42,15 @@ public class CollectionProtocol extends BaseExtensionEntity {
 		NONE;
 	}
 
+
+	public enum VisitNamePrintMode {
+		PRE_PRINT,
+		ON_COMPLETION,
+		NONE;
+	}
+
+	public static final String EXTN = "CollectionProtocolExtension";
+
 	private static final String ENTITY_NAME = "collection_protocol";
 	
 	private String title;
@@ -62,6 +71,10 @@ public class CollectionProtocol extends BaseExtensionEntity {
 	
 	private Long enrollment;
 	
+	private String sopDocumentUrl;
+
+	private String sopDocumentName;
+
 	private String descriptionURL;
 	
 	private String specimenLabelFormat;
@@ -81,6 +94,10 @@ public class CollectionProtocol extends BaseExtensionEntity {
 	private Boolean manualVisitNameEnabled;
 	
 	private Boolean manualSpecLabelEnabled;
+
+	private VisitNamePrintMode visitNamePrintMode = VisitNamePrintMode.NONE;
+
+	private Integer visitNamePrintCopies;
 	
 	private SpecimenLabelPrePrintMode spmnLabelPrePrintMode = SpecimenLabelPrePrintMode.NONE;
 	
@@ -176,6 +193,22 @@ public class CollectionProtocol extends BaseExtensionEntity {
 		this.enrollment = enrollment;
 	}
 
+	public String getSopDocumentUrl() {
+		return sopDocumentUrl;
+	}
+
+	public void setSopDocumentUrl(String sopDocumentUrl) {
+		this.sopDocumentUrl = sopDocumentUrl;
+	}
+
+	public String getSopDocumentName() {
+		return sopDocumentName;
+	}
+
+	public void setSopDocumentName(String sopDocumentName) {
+		this.sopDocumentName = sopDocumentName;
+	}
+
 	public String getDescriptionURL() {
 		return descriptionURL;
 	}
@@ -254,6 +287,22 @@ public class CollectionProtocol extends BaseExtensionEntity {
 	
 	public boolean isManualSpecLabelEnabled() {
 		return manualSpecLabelEnabled != null ? manualSpecLabelEnabled : false;
+	}
+
+	public VisitNamePrintMode getVisitNamePrintMode() {
+		return visitNamePrintMode != null ? visitNamePrintMode : VisitNamePrintMode.NONE;
+	}
+
+	public void setVisitNamePrintMode(VisitNamePrintMode visitNamePrintMode) {
+		this.visitNamePrintMode = visitNamePrintMode;
+	}
+
+	public Integer getVisitNamePrintCopies() {
+		return visitNamePrintCopies;
+	}
+
+	public void setVisitNamePrintCopies(Integer visitNamePrintCopies) {
+		this.visitNamePrintCopies = visitNamePrintCopies;
 	}
 
 	public SpecimenLabelPrePrintMode getSpmnLabelPrePrintMode() {
@@ -374,6 +423,8 @@ public class CollectionProtocol extends BaseExtensionEntity {
 		setPrincipalInvestigator(cp.getPrincipalInvestigator());
 		setIrbIdentifier(cp.getIrbIdentifier());
 		setEnrollment(cp.getEnrollment());
+		setSopDocumentUrl(cp.getSopDocumentUrl());
+		setSopDocumentName(cp.getSopDocumentName());
 		setDescriptionURL(cp.getDescriptionURL());
 		setPpidFormat(cp.getPpidFormat());
 		setManualPpidEnabled(cp.isManualPpidEnabled());
@@ -383,6 +434,8 @@ public class CollectionProtocol extends BaseExtensionEntity {
 		setDerivativeLabelFormat(cp.getDerivativeLabelFormat());
 		setAliquotLabelFormat(cp.getAliquotLabelFormat());
 		setManualSpecLabelEnabled(cp.isManualSpecLabelEnabled());
+		setVisitNamePrintMode(cp.getVisitNamePrintMode());
+		setVisitNamePrintCopies(cp.getVisitNamePrintCopies());
 		setUnsignedConsentDocumentURL(cp.getUnsignedConsentDocumentURL());
 		setExtension(cp.getExtension());
 		
@@ -415,6 +468,8 @@ public class CollectionProtocol extends BaseExtensionEntity {
 		cp.setAliquotLabelFormat(getAliquotLabelFormat());
 		cp.setDerivativeLabelFormat(getDerivativeLabelFormat());
 		cp.setManualSpecLabelEnabled(isManualSpecLabelEnabled());
+		cp.setVisitNamePrintMode(getVisitNamePrintMode());
+		cp.setVisitNamePrintCopies(getVisitNamePrintCopies());
 		cp.setSpmnLabelPrePrintMode(getSpmnLabelPrePrintMode());
 
 		copyLabelPrintSettingsTo(cp);
@@ -559,7 +614,7 @@ public class CollectionProtocol extends BaseExtensionEntity {
 	public void delete() {
 		List<DependentEntityDetail> dependentEntities = getDependentEntities();
 		if (!dependentEntities.isEmpty()) {
-			throw OpenSpecimenException.userError(CpeErrorCode.REF_ENTITY_FOUND);
+			throw OpenSpecimenException.userError(CpErrorCode.REF_ENTITY_FOUND);
 		}
 
 		setTitle(Utility.getDisabledValue(getTitle(), 255));
@@ -570,7 +625,7 @@ public class CollectionProtocol extends BaseExtensionEntity {
 	
 	@Override
 	public String getEntityType() {
-		return "CollectionProtocolExtension";
+		return EXTN;
 	}
 	
 	public CollectionProtocolEvent firstEvent() {

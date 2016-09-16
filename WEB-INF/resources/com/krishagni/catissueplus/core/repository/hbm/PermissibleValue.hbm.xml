@@ -27,10 +27,26 @@
       class="com.krishagni.catissueplus.core.administrative.domain.PermissibleValue"
       column="PARENT_IDENTIFIER"/>
 
-    <set name="children" inverse="false" cascade="none">
+    <set name="children" inverse="true" cascade="all-delete-orphan">
       <key column="PARENT_IDENTIFIER"/>
       <one-to-many class="com.krishagni.catissueplus.core.administrative.domain.PermissibleValue"/>
     </set>
+    
+    <map name="props" table="OS_PV_PROPS" lazy="false">
+      <key column="PV_ID"/>
+      <map-key column="NAME" type="string"/>
+      <element column="VALUE" type="string" not-null="true"/>
+    </map>
+
+    <query name="getSpecimenClasses">
+      select
+        pv.value
+      from
+        com.krishagni.catissueplus.core.administrative.domain.PermissibleValue pv
+      where
+        pv.attribute = 'specimen_type' and
+        pv.parent is null
+    </query>
 
     <query name="getSpecimenTypes">
       select
@@ -39,7 +55,7 @@
         com.krishagni.catissueplus.core.administrative.domain.PermissibleValue pv
         join pv.parent ppv
       where
-        ppv.attribute = '2003991' and
+        ppv.attribute = 'specimen_type' and
         ppv.value in (:specimenClasses)
     </query>
 

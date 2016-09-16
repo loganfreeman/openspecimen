@@ -23,96 +23,6 @@
           </li>
         </ul>
       </div>
-      <div os-show-if-menu-items-present dropdown class="inline">
-        <button class="default dropdown-toggle">
-          <span translate="common.buttons.import">Import</span>
-          <span class="fa fa-caret-down"></span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-right">
-          <li show-if-allowed="participantResource.createOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'cpr'})">
-              <i class="fa fa-user"></i>
-              <span translate="participant.registrations">Participant Registrations</span>
-            </a>
-          </li>
-          <li show-if-allowed="participantResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'participant'})">
-              <i class="fa fa-user"></i>
-              <span translate="participant.part_updates">Participant Updates</span>
-            </a>
-          </li>
-          <li show-if-allowed="participantResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'consent'})">
-              <i class="fa fa-pencil-square-o"></i>
-              <span translate="participant.consents">Consents</span>
-            </a>
-          </li>
-          <li show-if-allowed="participantResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'extensions', entityType: 'Participant'})">
-              <i class="fa fa-copy"></i>
-              <span translate="participant.part_extensions">Participant Forms</span>
-            </a>
-          </li>
-          <li class="divider"></li>
-          <li show-if-allowed="specimenResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'visit'})">
-              <i class="fa fa-calendar"></i>
-              <span translate="visits.list">Visits</span>
-            </a>
-          </li>
-          <li show-if-allowed="specimenResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'extensions', entityType: 'SpecimenCollectionGroup'})">
-              <i class="fa fa-copy"></i>
-              <span translate="visits.visit_extensions">Visit Forms</span>
-            </a>
-          </li>
-          <li class="divider"></li>
-          <li show-if-allowed="specimenResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'specimen'})">
-              <i class="fa fa-sliders"></i>
-              <span translate="specimens.list">Specimens</span>
-            </a>
-          </li>
-          <li show-if-allowed="specimenResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'specimenDerivative'})">
-              <i class="fa fa-flask"></i>
-              <span translate="specimens.spmn_derivatives">Specimen Derivatives</span>
-            </a>
-          </li>
-          <li show-if-allowed="specimenResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'specimenAliquot'})">
-              <i class="fa fa-share-alt"></i>
-              <span translate="specimens.spmn_aliquots">Specimen Aliquots</span>
-            </a>
-          </li>
-          <li show-if-allowed="specimenResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'extensions', entityType: 'Specimen'})">
-              <i class="fa fa-copy"></i>
-              <span translate="specimens.spmn_extensions">Specimen Forms</span>
-            </a>
-          </li>
-          <li show-if-allowed="specimenResource.updateOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'extensions', entityType: 'SpecimenEvent'})">
-              <i class="fa fa-calendar-o"></i>
-              <span translate="specimens.spmn_events">Specimen Events</span>
-            </a>
-          </li>
-          <li class="divider"></li>
-          <li show-if-allowed="participantResource.createOpts">
-            <a ui-sref="import-biospecimen-objs({objectType: 'masterSpecimen'})">
-              <i class="fa fa-user"></i>
-              <span translate="participant.master_specimens">Master Specimens</span>
-            </a>
-          </li>
-          <li class="divider"></li>
-          <li ng-if="allowReadJobs">
-            <a ui-sref="biospecimen-obj-import-jobs">
-              <i class="fa fa-table"></i>
-              <span translate="common.view_jobs">View Jobs</span>
-            </a>
-          </li>
-        </ul>
-      </div>
 
       <os-plugin-hooks view-name="'cp-list'" sec-name="'page-header'"></os-plugin-hooks>
 
@@ -124,6 +34,10 @@
   </div>
    
   <div class="container">
+    <div>
+      <os-list-pager opts="pagerOpts"> </os-list-pager>
+    </div>
+
     <table class="os-table os-table-hover">
       <thead class="os-table-head">
         <tr class="row">
@@ -151,14 +65,14 @@
         </tr>
       </thead>
       <tbody class="os-table-body">
-        <tr class="row" ng-repeat="cp in cpList" os-row-click="showParticipants(cp)">
+        <tr class="row" ng-repeat="cp in cpList" os-row-click="showCpSummary(cp)">
           <td class="col">
-            <a ui-sref="participant-list({cpId: cp.id})">
+            <a ui-sref="cp-summary-view({cpId: cp.id})">
               <span>{{cp.shortTitle}}</span>
             </a>
           </td>
           <td class="col os-desc-column">
-            <a ui-sref="participant-list({cpId: cp.id})">
+            <a ui-sref="cp-summary-view({cpId: cp.id})">
               <span>{{cp.title}}</span>
             </a>
           </td>
@@ -176,9 +90,9 @@
           </td>
           <td class="col os-click-esc">
             <div class="os-more-option-btns">
-              <button class="btn btn-xs btn-default" title="{{'cp.view_participants' | translate}}"
-                ui-sref="participant-list({cpId: cp.id})">
-                <span class="fa fa-group"></span>
+              <button class="btn btn-xs btn-default" title="{{'cp.view_list' | translate}}"
+                ui-sref="cp-list-view({cpId: cp.id})">
+                <span class="fa fa-list"></span>
               </button>
               <button class="btn btn-xs btn-default" title="{{'cp.view_catalog' | translate}}"
                 ng-click="viewCatalog(cp)">
