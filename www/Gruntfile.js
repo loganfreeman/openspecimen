@@ -1,16 +1,16 @@
+'use strict'
 
-'use strict';
+var port = process.env.PORT || 3000
 
 module.exports = function (grunt) {
-
   // Load grunt tasks automatically
-  require('load-grunt-tasks')(grunt);
+  require('load-grunt-tasks')(grunt)
 
   // Configurable paths for the application
   var appConfig = {
     app: require('./bower.json').appPath || 'app',
     dist: 'dist'
-  };
+  }
 
   // Define the configuration for all the tasks
   grunt.initConfig({
@@ -36,27 +36,43 @@ module.exports = function (grunt) {
     // The actual grunt server settings
     connect: {
       options: {
-        port: 9000,
+        port: port,
         // Change this to '0.0.0.0' to access the server from outside.
         hostname: 'localhost',
         livereload: 35729
       },
+      proxies: [
+        {
+          context: '/rest',
+          host: 'localhost',
+          port: 8080,
+          https: false,
+          xforward: false,
+          rewrite: {
+            '^/rest': '/openspecimen/rest'
+          },
+          headers: {
+            'x-custom-added-header': 'custom'
+          },
+          hideHeaders: ['x-removed-header']
+        }
+      ],
       livereload: {
         options: {
           open: true,
-          middleware: function (connect) {
-            return [
-              connect.static('.tmp'),
+          middleware: function (connect, options) {
+            var middlewares = [require('grunt-connect-proxy/lib/utils').proxyRequest, connect.static('.tmp'),
               connect().use(
                 '/bower_components',
                 connect.static('./bower_components')
               ),
               connect().use(
                 '/external_components',
-                 connect.static('./external_components')
+                connect.static('./external_components')
               ),
-              connect.static(appConfig.app)
-            ];
+              connect.static(appConfig.app)]
+
+            return middlewares
           }
         }
       }
@@ -94,7 +110,7 @@ module.exports = function (grunt) {
     wiredep: {
       app: {
         src: ['<%= config.app %>/index.html'],
-        ignorePath:  /\.\.\//
+        ignorePath: /\.\.\//
       }
     },
 
@@ -122,7 +138,7 @@ module.exports = function (grunt) {
       html: ['<%= config.dist %>/**/*.html'],
       css: ['<%= config.dist %>/styles/**/*.css'],
       options: {
-        assetsDirs: ['<%= config.dist %>','<%= config.dist %>/images']
+        assetsDirs: ['<%= config.dist %>', '<%= config.dist %>/images']
       }
     },
 
@@ -163,7 +179,7 @@ module.exports = function (grunt) {
           src: 'i18n/*',
           dest: '<%= config.dist %>/modules/'
         }
-          ]
+        ]
       },
       styles: {
         files: [{
@@ -257,22 +273,25 @@ module.exports = function (grunt) {
         'svgmin'
       ]
     }
-  });
+  })
 
   grunt.registerTask('serve', 'Compile then start a connect web server', function (target) {
     if (target === 'dist') {
-      return grunt.task.run(['build', 'connect:dist:keepalive']);
+      return grunt.task.run(['build', 'connect:dist:keepalive'])
     }
+
+    console.log('establishing client server at port: ' + port)
 
     grunt.task.run([
       'clean:server',
       'wiredep',
       'concurrent:server',
       'autoprefixer',
+      'configureProxies',
       'connect:livereload',
       'watch'
-    ]);
-  });
+    ])
+  })
 
   grunt.registerTask('build', [
     'clean:dist',
@@ -288,5 +307,5 @@ module.exports = function (grunt) {
     'filerev',
     'usemin',
     'htmlmin'
-  ]);
-};
+  ])
+}
