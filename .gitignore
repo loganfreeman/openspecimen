@@ -232,4 +232,5 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
-context.yml
+context.xml
+.docker-env

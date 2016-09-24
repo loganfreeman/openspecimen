@@ -290,12 +290,6 @@ task create_war(type: War) {
     into '/ngweb/external/de'
   }
 
-  from('./') {
-    include 'context.xml'
-
-    into 'META-INF/'
-  }
-
   manifest {
     attributes(
       "Implementation-Title": archivesBaseName,
