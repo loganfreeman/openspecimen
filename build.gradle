@@ -291,7 +291,7 @@ task create_war(type: War) {
   }
 
   from('./') {
-    include 'context.yml'
+    include 'context.xml'
 
     into 'META-INF/'
   }
