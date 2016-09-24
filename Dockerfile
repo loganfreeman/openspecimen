@@ -20,7 +20,12 @@ RUN wget -q https://archive.apache.org/dist/tomcat/tomcat-${TOMCAT_MAJOR_VERSION
 ADD create_tomcat_admin_user.sh /create_tomcat_admin_user.sh
 ADD run.sh /run.sh
 RUN chmod +x /*.sh
+RUN mkdir -p /usr/local/tomcat/data
+RUN mkdir -p /usr/local/tomcat/plugins
 COPY ./build/libs/openspecimen.war ${CATALINA_HOME}/webapps/
+COPY ./antlr-2.7.7.jar ${CATALINA_HOME}/lib/
+COPY ./mysql-connector-java-5.1.38-bin.jar ${CATALINA_HOME}/lib/
+COPY ./slf4j-log4j12-1.7.12.jar ${CATALINA_HOME}/lib/
 
 EXPOSE 8080
 CMD ["/run.sh"]
