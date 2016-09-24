@@ -75,7 +75,7 @@ configurations {
   ajc
   aspects
   aspectCompile
-  
+
   compile {
     extendsFrom aspects
   }
@@ -92,9 +92,9 @@ dependencies {
   aspects   "org.springframework:spring-aspects:3.2.13.RELEASE"
 
   compile fileTree(dir: 'lib', include: ['DynamicExtensions.jar'])
-  
+
   providedCompile group: 'javax.servlet', name: 'javax.servlet-api', version:'3.0.1'
-  
+
   compile group: 'org.antlr', name: 'antlr4', version:'4.5.1'
   compile group: 'aopalliance', name: 'aopalliance', version:'1.0'
   compile group: 'asm', name: 'asm', version:'3.3.1'
@@ -180,22 +180,22 @@ dependencies {
 
   runtime group: 'antlr', name: 'antlr', version: '2.7.7'
   runtime group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.12'
-  
+
   testCompile group: 'junit', name: 'junit', version:'4.11'
 }
 
 compileJava {
   doLast{
-    ant.taskdef(resource: "org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties", 
+    ant.taskdef(resource: "org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties",
                 classpath: configurations.ajc.asPath)
-      
+
     ant.iajc(
       source: 1.8,
       target: 1.8,
-      destDir: sourceSets.main.output.classesDir.absolutePath, 
-      maxmem: "512m", 
+      destDir: sourceSets.main.output.classesDir.absolutePath,
+      maxmem: "512m",
       fork: "true",
-      aspectPath: configurations.aspects.asPath,  
+      aspectPath: configurations.aspects.asPath,
       sourceRootCopyFilter: "**/*.java",
       classpath: "${configurations.compile.asPath};${configurations.aspectCompile.asPath}"){
       sourceroots{
@@ -232,12 +232,12 @@ def getBranch() {
 processResources {
   from(sourceSets.main.resources.srcDirs) {
     include 'application.properties'
-    
+
     def datasource_dialect = (database_type == "mysql") ? datasource_mysql_dialect : datasource_oracle_dialect
     filter(
-      ReplaceTokens, 
+      ReplaceTokens,
       tokens: [
-        datasource_jndi: datasource_jndi, 
+        datasource_jndi: datasource_jndi,
         datasource_type: deployment_type,
         datasource_dialect: datasource_dialect,
         database_type: database_type,
@@ -254,8 +254,8 @@ processResources {
 task unzip_de(type: Copy) {
   def zipFile = file('./dynamicextensions.zip')
   def outputDir = file("${buildDir}/detemp")
-  
-  from zipTree(zipFile) 
+
+  from zipTree(zipFile)
   into outputDir
 }
 
@@ -263,11 +263,11 @@ task create_war(type: War) {
   from ('./') {
     include 'ngweb/**'
   }
-  
+
   from ('./www/dist/') {
     include '**/**'
   }
-  
+
   from ('./WEB-INF/') {
     include 'resources/**'
     include 'applicationContext.xml'
@@ -275,19 +275,25 @@ task create_war(type: War) {
     include 'pluginUiContext.xml'
     include 'migrationContext.xml'
     include 'web.xml'
-    
+
     into 'WEB-INF/'
   }
-  
+
   from ('./build/detemp/') {
     include 'csd_web/**'
   }
-  
+
   from ('./build/detemp/ngweb/') {
     include 'css/**'
     include 'js/**'
-    
+
     into '/ngweb/external/de'
+  }
+
+  from('./') {
+    include 'context.yml'
+
+    into 'META-INF/'
   }
 
   manifest {
