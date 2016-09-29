@@ -312,7 +312,7 @@ task grunt_build(type: Exec) {
 
 def directory_exists(path) {
   File f = new File(path);
-  return f.exists() && f.isDirectory();
+  return !f.isAbsolute() || (f.exists() && f.isDirectory()) ;
 }
 
 task sanity_check << {
